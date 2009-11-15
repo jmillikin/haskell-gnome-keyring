@@ -22,8 +22,8 @@ import qualified Gnome.Keyring.Bindings as B
 import Control.Exception (throwIO)
 
 data Operation a = Operation
-	{ async  :: (a -> IO ()) -> (T.Error -> IO ()) -> IO T.CancellationKey
-	, async' ::       IO ()  -> (T.Error -> IO ()) -> IO T.CancellationKey
+	{ async  :: (T.Error -> IO ()) -> (a -> IO ()) -> IO T.CancellationKey
+	, async' :: (T.Error -> IO ()) ->       IO ()  -> IO T.CancellationKey
 	, sync   :: IO a
 	}
 
@@ -36,8 +36,8 @@ operation asyncIO syncIO = Operation
 	}
 
 runNullAsync :: B.Callback a b => (a -> Ptr () -> B.DestroyNotifyPtr -> IO T.CancellationKey)
-             -> IO () -> (T.Error -> IO ()) -> IO T.CancellationKey
-runNullAsync io = runAsync io . const
+             -> (T.Error -> IO ()) -> IO () -> IO T.CancellationKey
+runNullAsync io onError = runAsync io onError . const
 
 runSync :: IO (T.Result, a) -> IO a
 runSync io = do
@@ -67,8 +67,8 @@ destroyNotify = B.wrapDestroyNotify $ \ptr -> do
 	F.freeStablePtr stable
 
 runAsync :: B.Callback a b => (a -> Ptr () -> B.DestroyNotifyPtr -> IO T.CancellationKey)
-         -> (b -> IO ()) -> (T.Error -> IO ()) -> IO T.CancellationKey
-runAsync io onSuccess onError = do
+         -> (T.Error -> IO ()) -> (b -> IO ()) -> IO T.CancellationKey
+runAsync io onError onSuccess = do
 	destroy <- destroyNotify
 	callback <- B.buildCallback onSuccess onError
 	let context = Context
