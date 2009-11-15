@@ -20,6 +20,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 #include <gnome-keyring.h>
 module Gnome.Keyring.Bindings where
+import Control.Exception (bracket)
 import Data.Text.Lazy (Text)
 import qualified Data.Text.Lazy as Text
 import qualified Gnome.Keyring.Types as T
@@ -38,30 +39,22 @@ withText :: Text -> (CString -> IO a) -> IO a
 withText = withCString . Text.unpack
 
 withNullableText :: Maybe Text -> (CString -> IO a) -> IO a
-withNullableText Nothing io = io nullPtr
-withNullableText (Just x) io = withText x io
+withNullableText = maybeWith withText
 
 peekText :: CString -> IO Text
 peekText = fmap Text.pack . peekCString
 
 peekNullableText :: CString -> IO (Maybe Text)
-peekNullableText cstr
-	| cstr == nullPtr = return Nothing
-	| otherwise       = Just `fmap` peekText cstr
+peekNullableText = maybePeek peekText
+
+stealPeek :: (Ptr a -> IO b) -> Ptr (Ptr a) -> IO b
+stealPeek io ptr = bracket (peek ptr) free io
 
 stealTextPtr :: Ptr CString -> IO Text
-stealTextPtr ptr = do
-	cstr <- peek ptr
-	text <- peekText cstr
-	free cstr
-	return text
+stealTextPtr = stealPeek peekText
 
 stealNullableTextPtr :: Ptr CString -> IO (Maybe Text)
-stealNullableTextPtr ptr = do
-	cstr <- peek ptr
-	text <- peekNullableText cstr
-	free cstr
-	return text
+stealNullableTextPtr = stealPeek peekNullableText
 
 -- Convert GList to []
 mapGList :: (Ptr () -> IO a) -> Ptr () -> IO [a]
