@@ -23,6 +23,9 @@ module Gnome.Keyring.FFI where
 import Control.Exception (bracket)
 import Data.Text.Lazy (Text)
 import qualified Data.Text.Lazy as Text
+import Data.Text.Lazy.Encoding (encodeUtf8, decodeUtf8)
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as BSL
 import qualified Gnome.Keyring.Types as T
 
 -- Import unqualified for c2hs
@@ -36,13 +39,13 @@ resultAndTuple :: CInt -> (T.Result, ())
 resultAndTuple x = (result x, ())
 
 withText :: Text -> (CString -> IO a) -> IO a
-withText = withCString . Text.unpack
+withText = BS.useAsCString . BS.concat . BSL.toChunks . encodeUtf8
+
+peekText :: CString -> IO Text
+peekText = fmap (decodeUtf8 . BSL.fromChunks . (:[])) . BS.packCString
 
 withNullableText :: Maybe Text -> (CString -> IO a) -> IO a
 withNullableText = maybeWith withText
-
-peekText :: CString -> IO Text
-peekText = fmap Text.pack . peekCString
 
 peekNullableText :: CString -> IO (Maybe Text)
 peekNullableText = maybePeek peekText
@@ -68,7 +71,7 @@ mapGList f list
 		return $ item' : items
 
 convertStringList :: Ptr () -> IO [Text]
-convertStringList = mapGList (fmap Text.pack . peekCString . castPtr)
+convertStringList = mapGList (peekText . castPtr)
 
 stealTextList :: Ptr (Ptr ()) -> IO [Text]
 stealTextList ptr = do
