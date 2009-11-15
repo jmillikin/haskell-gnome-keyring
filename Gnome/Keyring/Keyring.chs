@@ -29,26 +29,26 @@ import Foreign.C
 import Gnome.Keyring.Bindings
 
 -- get_default_keyring
-getDefaultKeyring :: Operation Text
+getDefaultKeyring :: Operation (Maybe Text)
 getDefaultKeyring = operation
 	get_default_keyring
 	get_default_keyring_sync
 
 {# fun get_default_keyring
-	{ callbackToPtr `GetStringCallback'
+	{ callbackToPtr `GetNullableStringCallback'
 	, id `Ptr ()'
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
 {# fun get_default_keyring_sync
-	{ alloca- `Text' peekTextPtr*
+	{ alloca- `Maybe Text' stealNullableTextPtr*
 	} -> `Result' result #}
 
 -- set_default_keyring
 setDefaultKeyring :: Text -> Operation ()
-setDefaultKeyring name = operation
-	(set_default_keyring name)
-	(set_default_keyring_sync name)
+setDefaultKeyring k = operation
+	(set_default_keyring k)
+	(set_default_keyring_sync k)
 
 {# fun set_default_keyring
 	{ withText* `Text'
@@ -74,8 +74,110 @@ listKeyringNames = operation
 	} -> `CancellationKey' CancellationKey #}
 
 {# fun list_keyring_names_sync
-	{ alloca- `[Text]' peekTextList*
+	{ alloca- `[Text]' stealTextList*
 	} -> `Result' result #}
+
+-- create
+create :: Text -> Maybe Text -> Operation ()
+create k p = operation (c_create k p) (create_sync k p)
+
+{# fun create as c_create
+	{ withText* `Text'
+	, withNullableText* `Maybe Text'
+	, callbackToPtr `DoneCallback'
+	, id `Ptr ()'
+	, id `DestroyNotifyPtr'
+	} -> `CancellationKey' CancellationKey #}
+
+{# fun create_sync
+	{ withText* `Text'
+	, withNullableText* `Maybe Text'
+	} -> `(Result, ())' resultAndTuple #}
+
+-- delete
+delete :: Text -> Operation ()
+delete k = operation (c_delete k) (delete_sync k)
+
+{# fun delete as c_delete
+	{ withText* `Text'
+	, callbackToPtr `DoneCallback'
+	, id `Ptr ()'
+	, id `DestroyNotifyPtr'
+	} -> `CancellationKey' CancellationKey #}
+
+{# fun delete_sync
+	{ withText* `Text'
+	} -> `(Result, ())' resultAndTuple #}
+
+-- lock
+lock :: Maybe Text -> Operation ()
+lock k = operation (c_lock k) (lock_sync k)
+
+{# fun lock as c_lock
+	{ withNullableText* `Maybe Text'
+	, callbackToPtr `DoneCallback'
+	, id `Ptr ()'
+	, id `DestroyNotifyPtr'
+	} -> `CancellationKey' CancellationKey #}
+
+{# fun lock_sync
+	{ withNullableText* `Maybe Text'
+	} -> `(Result, ())' resultAndTuple #}
+
+-- lock_all
+lockAll :: Operation ()
+lockAll = operation lock_all lock_all_sync
+
+{# fun lock_all
+	{ callbackToPtr `DoneCallback'
+	, id `Ptr ()'
+	, id `DestroyNotifyPtr'
+	} -> `CancellationKey' CancellationKey #}
+
+{# fun lock_all_sync
+	{} -> `(Result, ())' resultAndTuple #}
+
+-- unlock
+unlock :: Maybe Text -> Maybe Text -> Operation ()
+unlock k p = operation (c_unlock k p) (unlock_sync k p)
+
+{# fun unlock as c_unlock
+	{ withNullableText* `Maybe Text'
+	, withNullableText* `Maybe Text'
+	, callbackToPtr `DoneCallback'
+	, id `Ptr ()'
+	, id `DestroyNotifyPtr'
+	} -> `CancellationKey' CancellationKey #}
+
+{# fun unlock_sync
+	{ withNullableText* `Maybe Text'
+	, withNullableText* `Maybe Text'
+	} -> `(Result, ())' resultAndTuple #}
+
+-- get_info
+
+-- set_info
+
+-- change_password
+changePassword :: Text -> Maybe Text -> Maybe Text -> Operation ()
+changePassword k op np = operation
+	(change_password k op np)
+	(change_password_sync k op np)
+
+{# fun change_password
+	{ withText* `Text'
+	, withNullableText* `Maybe Text'
+	, withNullableText* `Maybe Text'
+	, callbackToPtr `DoneCallback'
+	, id `Ptr ()'
+	, id `DestroyNotifyPtr'
+	} -> `CancellationKey' CancellationKey #}
+
+{# fun change_password_sync
+	{ withText* `Text'
+	, withNullableText* `Maybe Text'
+	, withNullableText* `Maybe Text'
+	} -> `(Result, ())' resultAndTuple #}
 
 -- list_item_ids
 listItemIDs :: Maybe Text -> Operation [Integer]
@@ -92,5 +194,5 @@ listItemIDs name = operation
 
 {# fun list_item_ids_sync
 	{ withNullableText* `Maybe Text'
-	, alloca- `[Integer]' peekWordList*
+	, alloca- `[Integer]' stealWordList*
 	} -> `Result' result #}

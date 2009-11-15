@@ -44,8 +44,24 @@ withNullableText (Just x) io = withText x io
 peekText :: CString -> IO Text
 peekText = fmap Text.pack . peekCString
 
-peekTextPtr :: Ptr CString -> IO Text
-peekTextPtr ptr = peek ptr >>= peekText
+peekNullableText :: CString -> IO (Maybe Text)
+peekNullableText cstr
+	| cstr == nullPtr = return Nothing
+	| otherwise       = Just `fmap` peekText cstr
+
+stealTextPtr :: Ptr CString -> IO Text
+stealTextPtr ptr = do
+	cstr <- peek ptr
+	text <- peekText cstr
+	free cstr
+	return text
+
+stealNullableTextPtr :: Ptr CString -> IO (Maybe Text)
+stealNullableTextPtr ptr = do
+	cstr <- peek ptr
+	text <- peekNullableText cstr
+	free cstr
+	return text
 
 -- Convert GList to []
 mapGList :: (Ptr () -> IO a) -> Ptr () -> IO [a]
@@ -61,15 +77,19 @@ mapGList f list
 convertStringList :: Ptr () -> IO [Text]
 convertStringList = mapGList (fmap Text.pack . peekCString . castPtr)
 
-peekTextList :: Ptr (Ptr ()) -> IO [Text]
-peekTextList ptr = do
+stealTextList :: Ptr (Ptr ()) -> IO [Text]
+stealTextList ptr = do
 	list <- peek ptr
-	convertStringList list
+	items <- convertStringList list
+	{# call gnome_keyring_string_list_free #} list
+	return items
 
-peekWordList :: Ptr (Ptr ()) -> IO [Integer]
-peekWordList ptr = do
+stealWordList :: Ptr (Ptr ()) -> IO [Integer]
+stealWordList ptr = do
 	list <- peek ptr
-	mapGList (return . toInteger . ptrToWordPtr) list
+	items <- mapGList (return . toInteger . ptrToWordPtr) list
+	{# call g_list_free #} list
+	return items
 
 --------------
 
@@ -115,6 +135,17 @@ instance Callback GetStringCallback Text where
 					onSuccess (Text.pack str)
 				x -> onError $ T.resultToError x
 		return $ GetStringCallback funptr
+
+data GetNullableStringCallback = GetNullableStringCallback GetStringCallbackPtr
+instance Callback GetNullableStringCallback (Maybe Text) where
+	callbackToPtr (GetNullableStringCallback x) = castFunPtr x
+	freeCallback  (GetNullableStringCallback x) = freeHaskellFunPtr x
+	buildCallback onSuccess onError = do
+		funptr <- wrapGetStringCallback $ \cres cstr _ -> do
+			case result cres of
+				T.RESULT_OK -> peekNullableText cstr >>= onSuccess
+				x -> onError $ T.resultToError x
+		return $ GetNullableStringCallback funptr
 
 type RawGetStringCallback = CInt -> CString -> Ptr () -> IO ()
 {# pointer GnomeKeyringOperationGetStringCallback as GetStringCallbackPtr #}

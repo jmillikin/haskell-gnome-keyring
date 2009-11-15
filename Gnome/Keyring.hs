@@ -15,7 +15,8 @@
 -}
 
 module Gnome.Keyring
-	( Operation
+	(-- * Sync and async operations
+	  Operation
 	, CancellationKey
 	, Error (..)
 	
@@ -24,12 +25,20 @@ module Gnome.Keyring
 	, sync
 	, cancel
 	
-	, available
-	
+	-- * Keyrings
 	, getDefaultKeyring
 	, setDefaultKeyring
 	, listKeyringNames
+	, create
+	, delete
+	, lock
+	, lockAll
+	, unlock
+	, changePassword
 	, listItemIDs
+	
+	-- * Miscellaneous
+	, available
 	) where
 import Gnome.Keyring.Keyring
 import Gnome.Keyring.Misc
