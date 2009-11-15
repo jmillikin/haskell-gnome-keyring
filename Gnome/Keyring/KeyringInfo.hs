@@ -14,13 +14,14 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 -}
 
-module Gnome.Keyring
-	( module Gnome.Keyring.Keyring
-	, module Gnome.Keyring.KeyringInfo
-	, module Gnome.Keyring.Operation
-	, available
+module Gnome.Keyring.KeyringInfo
+	( KeyringInfo
+	, keyringLockOnIdle
+	, keyringLockTimeout
+	, keyringMTime
+	, keyringCTime
+	, keyringIsLocked
+	, keyringSetLockOnIdle
+	, keyringSetLockTimeout
 	) where
-import Gnome.Keyring.Keyring
-import Gnome.Keyring.KeyringInfo
-import Gnome.Keyring.Operation
-import Gnome.Keyring.Misc
+import Gnome.Keyring.KeyringInfo.Internal

@@ -19,12 +19,12 @@
 #include <gnome-keyring.h>
 {# context prefix = "gnome_keyring_info_" #}
 
-module Gnome.Keyring.KeyringInfo where
+module Gnome.Keyring.KeyringInfo.Internal where
 
 -- Import unqualified for c2hs
 import Foreign
 import Foreign.C
-import Gnome.Keyring.Bindings
+import Gnome.Keyring.FFI
 import Gnome.Keyring.Types
 
 -- Our keyring info populates/is populated by the native info structure.

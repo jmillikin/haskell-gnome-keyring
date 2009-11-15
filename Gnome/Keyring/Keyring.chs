@@ -18,16 +18,30 @@
 #include <gnome-keyring.h>
 {# context prefix = "gnome_keyring_" #}
 
-module Gnome.Keyring.Keyring where
+module Gnome.Keyring.Keyring
+	( getDefaultKeyring
+	, setDefaultKeyring
+	, listKeyringNames
+	, create
+	, delete
+	, lock
+	, lockAll
+	, unlock
+	, getInfo
+	, setInfo
+	, changePassword
+	, listItemIDs
+	) where
+
 import Data.Text.Lazy (Text)
-import Gnome.Keyring.Operation (Operation, operation)
+import Gnome.Keyring.Operation.Internal (Operation, operation)
 import Gnome.Keyring.Types (Result, CancellationKey (..))
 
 -- Import unqualified for c2hs
 import Foreign
 import Foreign.C
-import Gnome.Keyring.Bindings
-import Gnome.Keyring.KeyringInfo
+import Gnome.Keyring.FFI
+import Gnome.Keyring.KeyringInfo.Internal
 
 -- get_default_keyring
 getDefaultKeyring :: Operation (Maybe Text)

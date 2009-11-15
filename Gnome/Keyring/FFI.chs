@@ -19,7 +19,7 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE FlexibleInstances #-}
 #include <gnome-keyring.h>
-module Gnome.Keyring.Bindings where
+module Gnome.Keyring.FFI where
 import Control.Exception (bracket)
 import Data.Text.Lazy (Text)
 import qualified Data.Text.Lazy as Text

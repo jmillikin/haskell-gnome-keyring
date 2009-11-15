@@ -18,13 +18,15 @@ library
   build-tools: c2hs
   exposed-modules:
     Gnome.Keyring
-
-  other-modules:
-    Gnome.Keyring.Bindings
     Gnome.Keyring.Keyring
     Gnome.Keyring.KeyringInfo
-    Gnome.Keyring.Misc
     Gnome.Keyring.Operation
+
+  other-modules:
+    Gnome.Keyring.FFI
+    Gnome.Keyring.KeyringInfo.Internal
+    Gnome.Keyring.Misc
+    Gnome.Keyring.Operation.Internal
     Gnome.Keyring.Types
 
   extra-libraries: gnome-keyring
