@@ -27,6 +27,7 @@ import Gnome.Keyring.Types (Result, CancellationKey (..))
 import Foreign
 import Foreign.C
 import Gnome.Keyring.Bindings
+import Gnome.Keyring.KeyringInfo
 
 -- get_default_keyring
 getDefaultKeyring :: Operation (Maybe Text)
@@ -155,8 +156,37 @@ unlock k p = operation (c_unlock k p) (unlock_sync k p)
 	} -> `(Result, ())' resultAndTuple #}
 
 -- get_info
+getInfo :: Maybe Text -> Operation KeyringInfo
+getInfo k = operation (get_info k) (get_info_sync k)
+
+{# fun get_info
+	{ withNullableText* `Maybe Text'
+	, callbackToPtr `GetKeyringInfoCallback'
+	, id `Ptr ()'
+	, id `DestroyNotifyPtr'
+	} -> `CancellationKey' CancellationKey #}
+
+{# fun get_info_sync
+	{ withNullableText* `Maybe Text'
+	, alloca- `KeyringInfo' stealKeyringInfoPtr*
+	} -> `Result' result #}
 
 -- set_info
+setInfo :: Maybe Text -> KeyringInfo -> Operation ()
+setInfo k info = operation (set_info k info) (set_info_sync k info)
+
+{# fun set_info
+	{ withNullableText* `Maybe Text'
+	, withKeyringInfo* `KeyringInfo'
+	, callbackToPtr `DoneCallback'
+	, id `Ptr ()'
+	, id `DestroyNotifyPtr'
+	} -> `CancellationKey' CancellationKey #}
+
+{# fun set_info_sync
+	{ withNullableText* `Maybe Text'
+	, withKeyringInfo* `KeyringInfo'
+	} -> `(Result, ())' resultAndTuple #}
 
 -- change_password
 changePassword :: Text -> Maybe Text -> Maybe Text -> Operation ()

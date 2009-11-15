@@ -22,6 +22,7 @@ library
   other-modules:
     Gnome.Keyring.Bindings
     Gnome.Keyring.Keyring
+    Gnome.Keyring.KeyringInfo
     Gnome.Keyring.Misc
     Gnome.Keyring.Operation
     Gnome.Keyring.Types

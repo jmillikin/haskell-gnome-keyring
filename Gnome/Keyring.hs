@@ -37,10 +37,27 @@ module Gnome.Keyring
 	, changePassword
 	, listItemIDs
 	
+	-- ** Keyring info
+	, KeyringInfo
+	
+	-- *** Reading
+	, keyringLockOnIdle
+	, keyringLockTimeout
+	, keyringMTime
+	, keyringCTime
+	, keyringIsLocked
+	, getInfo
+	
+	-- *** Modifying
+	, keyringSetLockOnIdle
+	, keyringSetLockTimeout
+	, setInfo
+	
 	-- * Miscellaneous
 	, available
 	) where
 import Gnome.Keyring.Keyring
+import Gnome.Keyring.KeyringInfo
 import Gnome.Keyring.Misc
 import Gnome.Keyring.Operation
 import Gnome.Keyring.Types
