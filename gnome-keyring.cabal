@@ -19,11 +19,14 @@ library
   build-tools: c2hs
   exposed-modules:
     Gnome.Keyring
+    Gnome.Keyring.Attribute
+    Gnome.Keyring.Item
     Gnome.Keyring.Keyring
     Gnome.Keyring.KeyringInfo
     Gnome.Keyring.Operation
 
   other-modules:
+    Gnome.Keyring.Attribute.Internal
     Gnome.Keyring.FFI
     Gnome.Keyring.KeyringInfo.Internal
     Gnome.Keyring.Misc

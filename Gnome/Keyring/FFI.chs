@@ -107,7 +107,7 @@ instance Callback DoneCallback () where
 	callbackToPtr (DoneCallback x) = castFunPtr x
 	freeCallback  (DoneCallback x) = freeHaskellFunPtr x
 	buildCallback onSuccess onError = do
-		funptr <- wrapDoneCallback $ \cres _ -> do
+		funptr <- wrapDoneCallback $ \cres _ ->
 			case result cres of
 				T.RESULT_OK -> onSuccess ()
 				x -> onError $ T.resultToError x
@@ -124,7 +124,7 @@ instance Callback GetStringCallback Text where
 	callbackToPtr (GetStringCallback x) = castFunPtr x
 	freeCallback  (GetStringCallback x) = freeHaskellFunPtr x
 	buildCallback onSuccess onError = do
-		funptr <- wrapGetStringCallback $ \cres cstr _ -> do
+		funptr <- wrapGetStringCallback $ \cres cstr _ ->
 			case result cres of
 				T.RESULT_OK -> do
 					str <- peekCString cstr
@@ -137,7 +137,7 @@ instance Callback GetNullableStringCallback (Maybe Text) where
 	callbackToPtr (GetNullableStringCallback x) = castFunPtr x
 	freeCallback  (GetNullableStringCallback x) = freeHaskellFunPtr x
 	buildCallback onSuccess onError = do
-		funptr <- wrapGetStringCallback $ \cres cstr _ -> do
+		funptr <- wrapGetStringCallback $ \cres cstr _ ->
 			case result cres of
 				T.RESULT_OK -> peekNullableText cstr >>= onSuccess
 				x -> onError $ T.resultToError x
@@ -148,6 +148,23 @@ type RawGetStringCallback = CInt -> CString -> Ptr () -> IO ()
 foreign import ccall "wrapper"
 	wrapGetStringCallback :: RawGetStringCallback -> IO GetStringCallbackPtr
 
+-- GnomeKeyringOperationGetIntCallback
+data GetWordCallback = GetWordCallback GetIntCallbackPtr
+instance Callback GetWordCallback Word32 where
+	callbackToPtr (GetWordCallback x) = castFunPtr x
+	freeCallback  (GetWordCallback x) = freeHaskellFunPtr x
+	buildCallback onSuccess onError = do
+		funptr <- wrapGetIntCallback $ \cres cint _ ->
+			case result cres of
+				T.RESULT_OK -> onSuccess $ fromIntegral cint
+				x -> onError $ T.resultToError x
+		return $ GetWordCallback funptr
+
+type RawGetIntCallback = CInt -> CUInt -> Ptr () -> IO ()
+{# pointer GnomeKeyringOperationGetIntCallback as GetIntCallbackPtr #}
+foreign import ccall "wrapper"
+	wrapGetIntCallback :: RawGetIntCallback -> IO GetIntCallbackPtr
+
 -- GnomeKeyringOperationGetListCallback
 mkListCallback :: (GetListCallbackPtr -> a)
                -> (Ptr () -> IO b)
@@ -155,7 +172,7 @@ mkListCallback :: (GetListCallbackPtr -> a)
                -> (T.Error -> IO ())
                -> IO a
 mkListCallback mkCallback f onSuccess onError = do
-	funptr <- wrapGetListCallback $ \cres list _ -> do
+	funptr <- wrapGetListCallback $ \cres list _ ->
 		case result cres of
 			T.RESULT_OK -> do
 				items <- mapGList f list
