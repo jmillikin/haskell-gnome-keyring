@@ -55,7 +55,7 @@ getDefaultKeyring = operation
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
-{# fun get_default_keyring_sync
+{# fun unsafe get_default_keyring_sync
 	{ alloca- `Maybe Text' stealNullableTextPtr*
 	} -> `Result' result #}
 
@@ -72,7 +72,7 @@ setDefaultKeyring k = operation
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
-{# fun set_default_keyring_sync
+{# fun unsafe set_default_keyring_sync
 	{ withText* `Text'
 	} -> `(Result, ())' resultAndTuple #}
 
@@ -88,7 +88,7 @@ listKeyringNames = operation
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
-{# fun list_keyring_names_sync
+{# fun unsafe list_keyring_names_sync
 	{ alloca- `[Text]' stealTextList*
 	} -> `Result' result #}
 
@@ -104,7 +104,7 @@ create k p = operation (c_create k p) (create_sync k p)
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
-{# fun create_sync
+{# fun unsafe create_sync
 	{ withText* `Text'
 	, withNullableText* `Maybe Text'
 	} -> `(Result, ())' resultAndTuple #}
@@ -120,7 +120,7 @@ delete k = operation (c_delete k) (delete_sync k)
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
-{# fun delete_sync
+{# fun unsafe delete_sync
 	{ withText* `Text'
 	} -> `(Result, ())' resultAndTuple #}
 
@@ -135,7 +135,7 @@ lock k = operation (c_lock k) (lock_sync k)
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
-{# fun lock_sync
+{# fun unsafe lock_sync
 	{ withNullableText* `Maybe Text'
 	} -> `(Result, ())' resultAndTuple #}
 
@@ -149,7 +149,7 @@ lockAll = operation lock_all lock_all_sync
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
-{# fun lock_all_sync
+{# fun unsafe lock_all_sync
 	{} -> `(Result, ())' resultAndTuple #}
 
 -- unlock
@@ -164,7 +164,7 @@ unlock k p = operation (c_unlock k p) (unlock_sync k p)
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
-{# fun unlock_sync
+{# fun unsafe unlock_sync
 	{ withNullableText* `Maybe Text'
 	, withNullableText* `Maybe Text'
 	} -> `(Result, ())' resultAndTuple #}
@@ -180,7 +180,7 @@ getInfo k = operation (get_info k) (get_info_sync k)
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
-{# fun get_info_sync
+{# fun unsafe get_info_sync
 	{ withNullableText* `Maybe Text'
 	, alloca- `KeyringInfo' stealKeyringInfoPtr*
 	} -> `Result' result #}
@@ -197,7 +197,7 @@ setInfo k info = operation (set_info k info) (set_info_sync k info)
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
-{# fun set_info_sync
+{# fun unsafe set_info_sync
 	{ withNullableText* `Maybe Text'
 	, withKeyringInfo* `KeyringInfo'
 	} -> `(Result, ())' resultAndTuple #}
@@ -217,7 +217,7 @@ changePassword k op np = operation
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
-{# fun change_password_sync
+{# fun unsafe change_password_sync
 	{ withText* `Text'
 	, withNullableText* `Maybe Text'
 	, withNullableText* `Maybe Text'
@@ -236,7 +236,7 @@ listItemIDs name = operation
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
-{# fun list_item_ids_sync
+{# fun unsafe list_item_ids_sync
 	{ withNullableText* `Maybe Text'
 	, alloca- `[Integer]' stealWordList*
 	} -> `Result' result #}

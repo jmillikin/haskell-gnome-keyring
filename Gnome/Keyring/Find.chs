@@ -52,7 +52,7 @@ peekFound f = do
 
 stealFoundList :: Ptr (Ptr ()) -> IO [Found]
 stealFoundList ptr = bracket (peek ptr)
-	{# call gnome_keyring_found_list_free #}
+	{# call unsafe gnome_keyring_found_list_free #}
 	(mapGList peekFound)
 
 data GetFoundListCallback = GetFoundListCallback GetListCallbackPtr
@@ -76,7 +76,7 @@ findItems t as = operation
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
-{# fun find_items_sync
+{# fun unsafe find_items_sync
 	{ fromItemType `ItemType'
 	, withAttributeList* `[Attribute]'
 	, alloca- `[Found]' stealFoundList*

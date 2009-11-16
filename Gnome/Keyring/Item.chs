@@ -125,7 +125,7 @@ itemCreate k t dn as s u = operation
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
-{# fun item_create_sync
+{# fun unsafe item_create_sync
 	{ withNullableText* `Maybe Text'
 	, fromItemType `ItemType'
 	, withText* `Text'
@@ -147,7 +147,7 @@ itemDelete k item = operation (item_delete k item) (item_delete_sync k item)
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
-{# fun item_delete_sync
+{# fun unsafe item_delete_sync
 	{ withNullableText* `Maybe Text'
 	, cItemID `ItemID'
 	} -> `(Result, ())' resultAndTuple #}
@@ -166,7 +166,7 @@ itemGetInfo k item = operation
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
-{# fun item_get_info_sync
+{# fun unsafe item_get_info_sync
 	{ withNullableText* `Maybe Text'
 	, cItemID `ItemID'
 	, alloca- `ItemInfo' stealItemInfo*
@@ -187,7 +187,7 @@ itemGetInfoFull k item flags = operation
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
-{# fun item_get_info_full_sync
+{# fun unsafe item_get_info_full_sync
 	{ withNullableText* `Maybe Text'
 	, cItemID `ItemID'
 	, cItemInfoFlags `[ItemInfoFlag]'
@@ -209,7 +209,7 @@ itemSetInfo k item info = operation
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
-{# fun item_set_info_sync
+{# fun unsafe item_set_info_sync
 	{ withNullableText* `Maybe Text'
 	, cItemID `ItemID'
 	, withItemInfo* `ItemInfo'
@@ -229,7 +229,7 @@ itemGetAttributes k item = operation
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
-{# fun item_get_attributes_sync
+{# fun unsafe item_get_attributes_sync
 	{ withNullableText* `Maybe Text'
 	, cItemID `ItemID'
 	, alloca- `[Attribute]' stealAttributeList*
@@ -250,7 +250,7 @@ itemSetAttributes k item as = operation
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
-{# fun item_set_attributes_sync
+{# fun unsafe item_set_attributes_sync
 	{ withNullableText* `Maybe Text'
 	, cItemID `ItemID'
 	, withAttributeList* `[Attribute]'
@@ -270,7 +270,7 @@ itemGetACL k item = operation
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
-{# fun item_get_acl_sync
+{# fun unsafe item_get_acl_sync
 	{ withNullableText* `Maybe Text'
 	, cItemID `ItemID'
 	, alloca- `[AccessControl]' stealACL*
@@ -291,7 +291,7 @@ itemSetACL k item acl = operation
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
-{# fun item_set_acl_sync
+{# fun unsafe item_set_acl_sync
 	{ withNullableText* `Maybe Text'
 	, cItemID `ItemID'
 	, withACL* `[AccessControl]'
@@ -315,7 +315,7 @@ itemGrantAccessRights k d p item r = operation
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
-{# fun item_grant_access_rights_sync
+{# fun unsafe item_grant_access_rights_sync
 	{ withNullableText* `Maybe Text'
 	, withText* `Text'
 	, withText* `Text'

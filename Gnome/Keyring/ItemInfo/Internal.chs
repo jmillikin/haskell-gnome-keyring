@@ -70,11 +70,11 @@ data ItemInfo = ItemInfo
 
 peekItemInfo :: Ptr () -> IO ItemInfo
 peekItemInfo info = do
-	cType <- {# call item_info_get_type #} info
-	secret <- stealText =<< {# call item_info_get_secret #} info
-	name <- stealText =<< {# call item_info_get_display_name #} info
-	mtime <- toInteger `fmap` {# call item_info_get_mtime #} info
-	ctime <- toInteger `fmap` {# call item_info_get_ctime #} info
+	cType <- {# call unsafe item_info_get_type #} info
+	secret <- stealText =<< {# call unsafe item_info_get_secret #} info
+	name <- stealText =<< {# call unsafe item_info_get_display_name #} info
+	mtime <- toInteger `fmap` {# call unsafe item_info_get_mtime #} info
+	ctime <- toInteger `fmap` {# call unsafe item_info_get_ctime #} info
 	let type' = toItemType . toEnum . fromIntegral $ cType
 	return $ ItemInfo type' secret name mtime ctime
 
@@ -82,16 +82,16 @@ stealItemInfo :: Ptr (Ptr ()) -> IO ItemInfo
 stealItemInfo ptr = bracket (peek ptr) freeItemInfo peekItemInfo
 
 freeItemInfo :: Ptr () -> IO ()
-freeItemInfo = {# call item_info_free #}
+freeItemInfo = {# call unsafe item_info_free #}
 
 foreign import ccall "gnome-keyring.h &gnome_keyring_item_info_free"
 	finalizeItemInfo :: FunPtr (Ptr a -> IO ())
 
 withItemInfo :: ItemInfo -> (Ptr () -> IO a) -> IO a
 withItemInfo info io = do
-	fptr <- newForeignPtr finalizeItemInfo =<< {# call item_info_new #}
+	fptr <- newForeignPtr finalizeItemInfo =<< {# call unsafe item_info_new #}
 	withForeignPtr fptr $ \ptr -> do
-	{# call item_info_set_type #} ptr . fromItemType . itemType $ info
-	withText (itemSecret info) $ {# call item_info_set_secret #} ptr
-	withText (itemDisplayName info) $ {# call item_info_set_display_name #} ptr
+	{# call unsafe item_info_set_type #} ptr . fromItemType . itemType $ info
+	withText (itemSecret info) $ {# call unsafe item_info_set_secret #} ptr
+	withText (itemDisplayName info) $ {# call unsafe item_info_set_display_name #} ptr
 	io ptr

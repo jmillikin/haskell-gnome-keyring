@@ -45,9 +45,9 @@ data AccessControl = AccessControl
 
 peekAccessControl :: Ptr () -> IO AccessControl
 peekAccessControl ac = do
-	name <- stealNullableText =<< {# call item_ac_get_display_name #} ac
-	path <- stealNullableText =<< {# call item_ac_get_path_name #} ac
-	cType <- {# call item_ac_get_access_type #} ac
+	name <- stealNullableText =<< {# call unsafe item_ac_get_display_name #} ac
+	path <- stealNullableText =<< {# call unsafe item_ac_get_path_name #} ac
+	cType <- {# call unsafe item_ac_get_access_type #} ac
 	return $ AccessControl name path $ peekAccessType cType
 
 stealACL :: Ptr (Ptr ()) -> IO [AccessControl]
@@ -58,26 +58,26 @@ withACL acl = bracket (buildACL acl) freeACL
 
 buildACL :: [AccessControl] -> IO (Ptr ())
 buildACL acs = bracket
-	{# call application_ref_new #}
-	{# call application_ref_free #} $ \appRef ->
+	{# call unsafe application_ref_new #}
+	{# call unsafe application_ref_free #} $ \appRef ->
 	buildACL' appRef acs nullPtr
 
 buildACL' :: Ptr () -> [AccessControl] -> Ptr () -> IO (Ptr ())
 buildACL'      _       [] list = return list
 buildACL' appRef (ac:acs) list = buildAC appRef ac
-	>>= {# call g_list_append #} list
+	>>= {# call unsafe g_list_append #} list
 	>>= buildACL' appRef acs
 
 buildAC :: Ptr () -> AccessControl -> IO (Ptr ())
 buildAC appRef ac = do
 	let cAllowed = cAccessTypes $ accessControlType ac
-	ptr <- {# call access_control_new #} appRef cAllowed
-	withNullableText (accessControlName ac) $ {# call item_ac_set_display_name #} ptr
-	withNullableText (accessControlPath ac) $ {# call item_ac_set_path_name #} ptr
+	ptr <- {# call unsafe access_control_new #} appRef cAllowed
+	withNullableText (accessControlName ac) $ {# call unsafe item_ac_set_display_name #} ptr
+	withNullableText (accessControlPath ac) $ {# call unsafe item_ac_set_path_name #} ptr
 	return ptr
 
 freeACL :: Ptr () -> IO ()
-freeACL = {# call acl_free #}
+freeACL = {# call unsafe acl_free #}
 
 cAccessTypes :: Bits a => Set AccessType -> a
 cAccessTypes = foldr (.|.) 0 . map (fromIntegral . fromEnum . fromAccessType) . toList where

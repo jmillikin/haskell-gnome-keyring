@@ -39,18 +39,18 @@ attributeName (WordAttribute n _) = n
 
 withAttributeList :: [Attribute] -> (Ptr () -> IO a) -> IO a
 withAttributeList attrs io = bracket newList freeList buildList where
-	newList = {# call g_array_new #} 0 0 {# sizeof GnomeKeyringAttribute #}
+	newList = {# call unsafe g_array_new #} 0 0 {# sizeof GnomeKeyringAttribute #}
 	buildList list = sequence (map (append list) attrs) >> io list
 	append list (TextAttribute n x) = appendString list n x
 	append list (WordAttribute n x) = appendUInt32 list n x
 
-{# fun attribute_list_append_string as appendString
+{# fun unsafe attribute_list_append_string as appendString
 	{ id `Ptr ()'
 	, withText* `Text'
 	, withText* `Text'
 	} -> `()' id #}
 
-{# fun attribute_list_append_uint32 as appendUInt32
+{# fun unsafe attribute_list_append_uint32 as appendUInt32
 	{ id `Ptr ()'
 	, withText* `Text'
 	, fromIntegral `Word32'
@@ -85,4 +85,4 @@ stealAttributeList :: Ptr (Ptr ()) -> IO [Attribute]
 stealAttributeList ptr = bracket (peek ptr) freeList peekAttributeList
 
 freeList :: Ptr () -> IO ()
-freeList = {# call attribute_list_free #}
+freeList = {# call unsafe attribute_list_free #}

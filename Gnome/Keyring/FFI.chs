@@ -87,14 +87,14 @@ stealTextList :: Ptr (Ptr ()) -> IO [Text]
 stealTextList ptr = do
 	list <- peek ptr
 	items <- convertStringList list
-	{# call gnome_keyring_string_list_free #} list
+	{# call unsafe gnome_keyring_string_list_free #} list
 	return items
 
 stealWordList :: Ptr (Ptr ()) -> IO [Integer]
 stealWordList ptr = do
 	list <- peek ptr
 	items <- mapGList (return . toInteger . ptrToWordPtr) list
-	{# call g_list_free #} list
+	{# call unsafe g_list_free #} list
 	return items
 
 --------------

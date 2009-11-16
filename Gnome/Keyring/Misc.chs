@@ -26,7 +26,7 @@ import Foreign
 import Foreign.C
 
 --available :: IO Bool
-{# fun is_available as available
+{# fun unsafe is_available as available
 	{} -> `Bool' toBool #}
 
 unpackKey :: CancellationKey -> Ptr ()
