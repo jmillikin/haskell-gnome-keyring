@@ -22,7 +22,7 @@
 
 module Gnome.Keyring.Item
 	( ItemInfoFlag (..)
-	, ItemID
+	, ItemID (..)
 	, itemCreate
 	, itemDelete
 	, itemGetInfo
