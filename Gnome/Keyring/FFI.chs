@@ -57,6 +57,9 @@ peekNullableText = maybePeek peekText
 stealText :: CString -> IO Text
 stealText cstr = bracket (return cstr) free peekText
 
+stealNullableText :: CString -> IO (Maybe Text)
+stealNullableText cstr = bracket (return cstr) free peekNullableText
+
 stealPeek :: (Ptr a -> IO b) -> Ptr (Ptr a) -> IO b
 stealPeek io ptr = bracket (peek ptr) free io
 

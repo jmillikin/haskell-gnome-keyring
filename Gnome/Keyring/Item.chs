@@ -31,6 +31,7 @@ module Gnome.Keyring.Item
 	, itemGetAttributes
 	, itemSetAttributes
 	, itemGetACL
+	, itemSetACL
 	, itemGrantAccessRights
 	) where
 
@@ -274,6 +275,27 @@ itemGetACL k item = operation
 	, cItemID `ItemID'
 	, alloca- `[AccessControl]' stealACL*
 	} -> `Result' result #}
+
+-- item_set_acl
+itemSetACL :: Maybe Text -> ItemID -> [AccessControl] -> Operation ()
+itemSetACL k item acl = operation
+	(item_set_acl k item acl)
+	(item_set_acl_sync k item acl)
+
+{# fun item_set_acl
+	{ withNullableText* `Maybe Text'
+	, cItemID `ItemID'
+	, withACL* `[AccessControl]'
+	, callbackToPtr `DoneCallback'
+	, id `Ptr ()'
+	, id `DestroyNotifyPtr'
+	} -> `CancellationKey' CancellationKey #}
+
+{# fun item_set_acl_sync
+	{ withNullableText* `Maybe Text'
+	, cItemID `ItemID'
+	, withACL* `[AccessControl]'
+	} -> `(Result, ())' resultAndTuple #}
 
 -- item_grant_access_rights
 itemGrantAccessRights :: Maybe Text -> Text -> Text -> ItemID
