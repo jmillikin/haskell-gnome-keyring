@@ -15,12 +15,14 @@ library
       base >=4 && < 5
     , text
     , bytestring
+    , containers
 
   build-tools:
     c2hs >= 0.16
 
   exposed-modules:
     Gnome.Keyring
+    Gnome.Keyring.AccessControl
     Gnome.Keyring.Attribute
     Gnome.Keyring.Find
     Gnome.Keyring.Item
@@ -30,6 +32,7 @@ library
     Gnome.Keyring.Operation
 
   other-modules:
+    Gnome.Keyring.AccessControl.Internal
     Gnome.Keyring.Attribute.Internal
     Gnome.Keyring.FFI
     Gnome.Keyring.ItemInfo.Internal

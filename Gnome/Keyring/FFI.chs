@@ -42,7 +42,11 @@ withText :: Text -> (CString -> IO a) -> IO a
 withText = BS.useAsCString . BS.concat . BSL.toChunks . encodeUtf8
 
 peekText :: CString -> IO Text
-peekText = fmap (decodeUtf8 . BSL.fromChunks . (:[])) . BS.packCString
+peekText cstr
+	| cstr == nullPtr = return $ Text.pack "(null)"
+	| otherwise       = do
+		bytes <- BS.packCString cstr
+		return . decodeUtf8 . BSL.fromChunks $ [bytes]
 
 withNullableText :: Maybe Text -> (CString -> IO a) -> IO a
 withNullableText = maybeWith withText

@@ -14,23 +14,8 @@
    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 -}
 
-module Gnome.Keyring
-	( module Gnome.Keyring.Keyring
-	, module Gnome.Keyring.KeyringInfo
-	, module Gnome.Keyring.AccessControl
-	, module Gnome.Keyring.Attribute
-	, module Gnome.Keyring.Find
-	, module Gnome.Keyring.Item
-	, module Gnome.Keyring.ItemInfo
-	, module Gnome.Keyring.Operation
-	, available
+module Gnome.Keyring.AccessControl
+	( AccessControl (..)
+	, AccessType (..)
 	) where
-import Gnome.Keyring.Keyring
-import Gnome.Keyring.KeyringInfo
-import Gnome.Keyring.AccessControl
-import Gnome.Keyring.Attribute
-import Gnome.Keyring.Find
-import Gnome.Keyring.Item
-import Gnome.Keyring.ItemInfo
-import Gnome.Keyring.Operation
-import Gnome.Keyring.Misc
+import Gnome.Keyring.AccessControl.Internal

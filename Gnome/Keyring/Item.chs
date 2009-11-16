@@ -30,11 +30,15 @@ module Gnome.Keyring.Item
 	, itemSetInfo
 	, itemGetAttributes
 	, itemSetAttributes
+	, itemGetACL
+	, itemGrantAccessRights
 	) where
 
+import Data.Set (Set)
 import Data.Text.Lazy (Text)
 import Gnome.Keyring.Operation.Internal
 import Gnome.Keyring.Types
+import Gnome.Keyring.AccessControl.Internal
 import Gnome.Keyring.Attribute.Internal
 import Gnome.Keyring.ItemInfo.Internal
 
@@ -249,4 +253,50 @@ itemSetAttributes k item as = operation
 	{ withNullableText* `Maybe Text'
 	, cItemID `ItemID'
 	, withAttributeList* `[Attribute]'
+	} -> `(Result, ())' resultAndTuple #}
+
+-- item_get_acl
+itemGetACL :: Maybe Text -> ItemID -> Operation [AccessControl]
+itemGetACL k item = operation
+	(item_get_acl k item)
+	(item_get_acl_sync k item)
+
+{# fun item_get_acl
+	{ withNullableText* `Maybe Text'
+	, cItemID `ItemID'
+	, callbackToPtr `GetACLCallback'
+	, id `Ptr ()'
+	, id `DestroyNotifyPtr'
+	} -> `CancellationKey' CancellationKey #}
+
+{# fun item_get_acl_sync
+	{ withNullableText* `Maybe Text'
+	, cItemID `ItemID'
+	, alloca- `[AccessControl]' stealACL*
+	} -> `Result' result #}
+
+-- item_grant_access_rights
+itemGrantAccessRights :: Maybe Text -> Text -> Text -> ItemID
+                      -> Set AccessType -> Operation ()
+itemGrantAccessRights k d p item r = operation
+	(item_grant_access_rights k d p item r)
+	(item_grant_access_rights_sync k d p item r)
+
+{# fun item_grant_access_rights
+	{ withNullableText* `Maybe Text'
+	, withText* `Text'
+	, withText* `Text'
+	, cItemID `ItemID'
+	, cAccessTypes `Set AccessType'
+	, callbackToPtr `DoneCallback'
+	, id `Ptr ()'
+	, id `DestroyNotifyPtr'
+	} -> `CancellationKey' CancellationKey #}
+
+{# fun item_grant_access_rights_sync
+	{ withNullableText* `Maybe Text'
+	, withText* `Text'
+	, withText* `Text'
+	, cItemID `ItemID'
+	, cAccessTypes `Set AccessType'
 	} -> `(Result, ())' resultAndTuple #}
