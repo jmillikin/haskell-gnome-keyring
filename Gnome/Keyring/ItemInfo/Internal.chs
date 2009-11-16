@@ -26,6 +26,9 @@ import Foreign
 import Foreign.C
 import Gnome.Keyring.FFI
 
+newtype ItemID = ItemID Word32
+	deriving (Show, Eq, Ord)
+
 {# enum GnomeKeyringItemType as RawType {} deriving (Show) #}
 
 data ItemType

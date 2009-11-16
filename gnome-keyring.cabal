@@ -22,6 +22,7 @@ library
   exposed-modules:
     Gnome.Keyring
     Gnome.Keyring.Attribute
+    Gnome.Keyring.Find
     Gnome.Keyring.Item
     Gnome.Keyring.ItemInfo
     Gnome.Keyring.Keyring

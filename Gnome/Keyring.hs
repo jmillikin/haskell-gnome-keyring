@@ -18,6 +18,7 @@ module Gnome.Keyring
 	( module Gnome.Keyring.Keyring
 	, module Gnome.Keyring.KeyringInfo
 	, module Gnome.Keyring.Attribute
+	, module Gnome.Keyring.Find
 	, module Gnome.Keyring.Item
 	, module Gnome.Keyring.ItemInfo
 	, module Gnome.Keyring.Operation
@@ -26,6 +27,7 @@ module Gnome.Keyring
 import Gnome.Keyring.Keyring
 import Gnome.Keyring.KeyringInfo
 import Gnome.Keyring.Attribute
+import Gnome.Keyring.Find
 import Gnome.Keyring.Item
 import Gnome.Keyring.ItemInfo
 import Gnome.Keyring.Operation

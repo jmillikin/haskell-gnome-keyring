@@ -47,9 +47,6 @@ data ItemInfoFlag
 	| ItemInfoSecret
 	deriving (Show, Eq)
 
-newtype ItemID = ItemID Word32
-	deriving (Show, Eq, Ord)
-
 peekItemID :: (Storable a, Integral a) => Ptr a -> IO ItemID
 peekItemID = fmap (ItemID . fromIntegral) . peek
 
