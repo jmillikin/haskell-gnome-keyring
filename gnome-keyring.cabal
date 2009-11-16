@@ -16,7 +16,9 @@ library
     , text
     , bytestring
 
-  build-tools: c2hs
+  build-tools:
+    c2hs >= 0.16
+
   exposed-modules:
     Gnome.Keyring
     Gnome.Keyring.Attribute

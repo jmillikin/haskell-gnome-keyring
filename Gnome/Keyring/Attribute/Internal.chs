@@ -26,9 +26,12 @@ import Foreign
 import Foreign.C
 import Gnome.Keyring.FFI
 
+{# enum GnomeKeyringAttributeType as AttributeType {} #}
+
 data Attribute
 	= TextAttribute Text Text
 	| WordAttribute Text Word32
+	deriving (Show, Eq)
 
 attributeName :: Attribute -> Text
 attributeName (TextAttribute n _) = n
@@ -37,7 +40,6 @@ attributeName (WordAttribute n _) = n
 withAttributeList :: [Attribute] -> (Ptr () -> IO a) -> IO a
 withAttributeList attrs io = bracket newList freeList buildList where
 	newList = {# call g_array_new #} 0 0 {# sizeof GnomeKeyringAttribute #}
-	freeList = {# call attribute_list_free #}
 	buildList list = sequence (map (append list) attrs) >> io list
 	append list (TextAttribute n x) = appendString list n x
 	append list (WordAttribute n x) = appendUInt32 list n x
@@ -53,3 +55,34 @@ withAttributeList attrs io = bracket newList freeList buildList where
 	, withText* `Text'
 	, fromIntegral `Word32'
 	} -> `()' id #}
+
+peekAttributeList :: Ptr () -> IO [Attribute]
+peekAttributeList array = do
+	len <- {# get GArray->len #} array
+	start <- {# get GArray->data #} array
+	peekAttributeList' (fromIntegral len) (castPtr start)
+
+peekAttributeList' :: Integer -> Ptr () -> IO [Attribute]
+peekAttributeList' 0   _ = return []
+peekAttributeList' n ptr = do
+	attr <- peekAttribute ptr
+	attrs <- peekAttributeList' (n - 1) (plusPtr ptr {# sizeof GnomeKeyringAttribute #})
+	return $ attr : attrs
+
+peekAttribute :: Ptr () -> IO Attribute
+peekAttribute attr = do
+	name <- peekText =<< {# get GnomeKeyringAttribute->name #} attr
+	cType <- {# get GnomeKeyringAttribute->type #} attr
+	case toEnum . fromIntegral $ cType of
+		ATTRIBUTE_TYPE_STRING -> do
+			value <- peekText =<< {# get GnomeKeyringAttribute.value.string #} attr
+			return $ TextAttribute name value
+		ATTRIBUTE_TYPE_UINT32 -> do
+			cValue <- {# get GnomeKeyringAttribute.value.integer #} attr
+			return $ WordAttribute name $ fromIntegral cValue
+
+stealAttributeList :: Ptr (Ptr ()) -> IO [Attribute]
+stealAttributeList ptr = bracket (peek ptr) freeList peekAttributeList
+
+freeList :: Ptr () -> IO ()
+freeList = {# call attribute_list_free #}

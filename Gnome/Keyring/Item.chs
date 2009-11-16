@@ -16,6 +16,7 @@
 
 {-# LANGUAGE ForeignFunctionInterface #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE FlexibleInstances #-}
 #include <gnome-keyring.h>
 {# context prefix = "gnome_keyring_" #}
 
@@ -25,12 +26,14 @@ module Gnome.Keyring.Item
 	, ItemID
 	, itemCreate
 	, itemDelete
+	, itemGetAttributes
+	, itemSetAttributes
 	) where
 
 import Data.Text.Lazy (Text)
-import Gnome.Keyring.Operation.Internal (Operation, operation)
-import Gnome.Keyring.Types (Result, CancellationKey (..))
-import Gnome.Keyring.Attribute.Internal (Attribute, withAttributeList)
+import Gnome.Keyring.Operation.Internal
+import Gnome.Keyring.Types
+import Gnome.Keyring.Attribute.Internal
 
 import Foreign
 import Foreign.C
@@ -79,6 +82,23 @@ instance Callback GetItemIDCallback ItemID where
 		onSuccess' = onSuccess . ItemID
 		in fmap GetItemIDCallback . buildCallback onSuccess'
 
+-- GnomeKeyringOperationGetAttributesCallback
+data GetAttributesCallback = GetAttributesCallback GetAttributesCallbackPtr
+instance Callback GetAttributesCallback [Attribute] where
+	callbackToPtr (GetAttributesCallback x) = castFunPtr x
+	freeCallback  (GetAttributesCallback x) = freeHaskellFunPtr x
+	buildCallback onSuccess onError = do
+		funptr <- wrapGetAttributesCallback $ \cres ptr _ ->
+			case result cres of
+				RESULT_OK -> peekAttributeList ptr >>= onSuccess
+				x -> onError $ resultToError x
+		return $ GetAttributesCallback funptr
+
+type RawGetAttributesCallback = CInt -> Ptr () -> Ptr () -> IO ()
+{# pointer GnomeKeyringOperationGetAttributesCallback as GetAttributesCallbackPtr #}
+foreign import ccall "wrapper"
+	wrapGetAttributesCallback :: RawGetAttributesCallback -> IO GetAttributesCallbackPtr
+
 -- item_create
 itemCreate :: Maybe Text -> ItemType -> Text -> [Attribute] -> Text -> Bool
            -> Operation ItemID
@@ -123,4 +143,45 @@ itemDelete k item = operation (item_delete k item) (item_delete_sync k item)
 {# fun item_delete_sync
 	{ withNullableText* `Maybe Text'
 	, cItemID `ItemID'
+	} -> `(Result, ())' resultAndTuple #}
+
+-- item_get_attributes
+itemGetAttributes :: Maybe Text -> ItemID -> Operation [Attribute]
+itemGetAttributes k item = operation
+	(item_get_attributes k item)
+	(item_get_attributes_sync k item)
+
+{# fun item_get_attributes
+	{ withNullableText* `Maybe Text'
+	, cItemID `ItemID'
+	, callbackToPtr `GetAttributesCallback'
+	, id `Ptr ()'
+	, id `DestroyNotifyPtr'
+	} -> `CancellationKey' CancellationKey #}
+
+{# fun item_get_attributes_sync
+	{ withNullableText* `Maybe Text'
+	, cItemID `ItemID'
+	, alloca- `[Attribute]' stealAttributeList*
+	} -> `Result' result #}
+
+-- item_set_attributes
+itemSetAttributes :: Maybe Text -> ItemID -> [Attribute] -> Operation ()
+itemSetAttributes k item as = operation
+	(item_set_attributes k item as)
+	(item_set_attributes_sync k item as)
+
+{# fun item_set_attributes
+	{ withNullableText* `Maybe Text'
+	, cItemID `ItemID'
+	, withAttributeList* `[Attribute]'
+	, callbackToPtr `DoneCallback'
+	, id `Ptr ()'
+	, id `DestroyNotifyPtr'
+	} -> `CancellationKey' CancellationKey #}
+
+{# fun item_set_attributes_sync
+	{ withNullableText* `Maybe Text'
+	, cItemID `ItemID'
+	, withAttributeList* `[Attribute]'
 	} -> `(Result, ())' resultAndTuple #}
