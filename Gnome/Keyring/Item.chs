@@ -22,10 +22,12 @@
 
 module Gnome.Keyring.Item
 	( ItemInfoFlag (..)
-	, ItemType (..)
 	, ItemID
 	, itemCreate
 	, itemDelete
+	, itemGetInfo
+	, itemGetInfoFull
+	, itemSetInfo
 	, itemGetAttributes
 	, itemSetAttributes
 	) where
@@ -34,6 +36,7 @@ import Data.Text.Lazy (Text)
 import Gnome.Keyring.Operation.Internal
 import Gnome.Keyring.Types
 import Gnome.Keyring.Attribute.Internal
+import Gnome.Keyring.ItemInfo.Internal
 
 import Foreign
 import Foreign.C
@@ -44,34 +47,19 @@ data ItemInfoFlag
 	| ItemInfoSecret
 	deriving (Show, Eq)
 
-data ItemType
-	= ItemGenericSecret
-	| ItemNetworkPassword
-	| ItemNote
-	| ItemChainedKeyringPassword
-	| ItemEncryptionKeyPassword
-	| ItemPublicKeyStorage
-	deriving (Show, Eq)
-
 newtype ItemID = ItemID Word32
 	deriving (Show, Eq, Ord)
-
-{# enum GnomeKeyringItemType as RawType {} deriving (Show) #}
-
-fromItemType :: ItemType -> CInt
-fromItemType = fromIntegral . fromEnum . toRaw where
-	toRaw ItemGenericSecret = ITEM_GENERIC_SECRET
-	toRaw ItemNetworkPassword = ITEM_NETWORK_PASSWORD
-	toRaw ItemNote = ITEM_NOTE
-	toRaw ItemChainedKeyringPassword = ITEM_CHAINED_KEYRING_PASSWORD
-	toRaw ItemEncryptionKeyPassword = ITEM_ENCRYPTION_KEY_PASSWORD
-	toRaw ItemPublicKeyStorage = ITEM_PK_STORAGE
 
 peekItemID :: (Storable a, Integral a) => Ptr a -> IO ItemID
 peekItemID = fmap (ItemID . fromIntegral) . peek
 
 cItemID :: Integral a => ItemID -> a
 cItemID (ItemID x) = fromIntegral x
+
+cItemInfoFlags :: Bits a => [ItemInfoFlag] -> a
+cItemInfoFlags = foldr (.|.) 0 . map flagValue where
+	flagValue ItemInfoBasics = 0
+	flagValue ItemInfoSecret = 1
 
 -- wrap a GetWordCallback
 data GetItemIDCallback = GetItemIDCallback GetWordCallback
@@ -81,6 +69,23 @@ instance Callback GetItemIDCallback ItemID where
 	buildCallback onSuccess = let
 		onSuccess' = onSuccess . ItemID
 		in fmap GetItemIDCallback . buildCallback onSuccess'
+
+-- GnomeKeyringOperationGetItemInfoCallback
+data GetItemInfoCallback = GetItemInfoCallback GetItemInfoCallbackPtr
+instance Callback GetItemInfoCallback ItemInfo where
+	callbackToPtr (GetItemInfoCallback x) = castFunPtr x
+	freeCallback  (GetItemInfoCallback x) = freeHaskellFunPtr x
+	buildCallback onSuccess onError = do
+		funptr <- wrapGetItemInfoCallback $ \cres ptr _ ->
+			case result cres of
+				RESULT_OK -> peekItemInfo ptr >>= onSuccess
+				x -> onError $ resultToError x
+		return $ GetItemInfoCallback funptr
+
+type RawGetItemInfoCallback = CInt -> Ptr () -> Ptr () -> IO ()
+{# pointer GnomeKeyringOperationGetItemInfoCallback as GetItemInfoCallbackPtr #}
+foreign import ccall "wrapper"
+	wrapGetItemInfoCallback :: RawGetItemInfoCallback -> IO GetItemInfoCallbackPtr
 
 -- GnomeKeyringOperationGetAttributesCallback
 data GetAttributesCallback = GetAttributesCallback GetAttributesCallbackPtr
@@ -143,6 +148,69 @@ itemDelete k item = operation (item_delete k item) (item_delete_sync k item)
 {# fun item_delete_sync
 	{ withNullableText* `Maybe Text'
 	, cItemID `ItemID'
+	} -> `(Result, ())' resultAndTuple #}
+
+-- item_get_info
+itemGetInfo :: Maybe Text -> ItemID -> Operation ItemInfo
+itemGetInfo k item = operation
+	(item_get_info k item)
+	(item_get_info_sync k item)
+
+{# fun item_get_info
+	{ withNullableText* `Maybe Text'
+	, cItemID `ItemID'
+	, callbackToPtr `GetItemInfoCallback'
+	, id `Ptr ()'
+	, id `DestroyNotifyPtr'
+	} -> `CancellationKey' CancellationKey #}
+
+{# fun item_get_info_sync
+	{ withNullableText* `Maybe Text'
+	, cItemID `ItemID'
+	, alloca- `ItemInfo' stealItemInfo*
+	} -> `Result' result #}
+
+-- item_get_info_full
+itemGetInfoFull :: Maybe Text -> ItemID -> [ItemInfoFlag] -> Operation ItemInfo
+itemGetInfoFull k item flags = operation
+	(item_get_info_full k item flags)
+	(item_get_info_full_sync k item flags)
+
+{# fun item_get_info_full
+	{ withNullableText* `Maybe Text'
+	, cItemID `ItemID'
+	, cItemInfoFlags `[ItemInfoFlag]'
+	, callbackToPtr `GetItemInfoCallback'
+	, id `Ptr ()'
+	, id `DestroyNotifyPtr'
+	} -> `CancellationKey' CancellationKey #}
+
+{# fun item_get_info_full_sync
+	{ withNullableText* `Maybe Text'
+	, cItemID `ItemID'
+	, cItemInfoFlags `[ItemInfoFlag]'
+	, alloca- `ItemInfo' stealItemInfo*
+	} -> `Result' result #}
+
+-- item_set_info
+itemSetInfo :: Maybe Text -> ItemID -> ItemInfo -> Operation ()
+itemSetInfo k item info = operation
+	(item_set_info k item info)
+	(item_set_info_sync k item info)
+
+{# fun item_set_info
+	{ withNullableText* `Maybe Text'
+	, cItemID `ItemID'
+	, withItemInfo* `ItemInfo'
+	, callbackToPtr `DoneCallback'
+	, id `Ptr ()'
+	, id `DestroyNotifyPtr'
+	} -> `CancellationKey' CancellationKey #}
+
+{# fun item_set_info_sync
+	{ withNullableText* `Maybe Text'
+	, cItemID `ItemID'
+	, withItemInfo* `ItemInfo'
 	} -> `(Result, ())' resultAndTuple #}
 
 -- item_get_attributes
