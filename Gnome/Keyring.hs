@@ -22,6 +22,7 @@ module Gnome.Keyring
 	, module Gnome.Keyring.Find
 	, module Gnome.Keyring.Item
 	, module Gnome.Keyring.ItemInfo
+	, module Gnome.Keyring.NetworkPassword
 	, module Gnome.Keyring.Operation
 	, available
 	) where
@@ -32,5 +33,6 @@ import Gnome.Keyring.Attribute
 import Gnome.Keyring.Find
 import Gnome.Keyring.Item
 import Gnome.Keyring.ItemInfo
+import Gnome.Keyring.NetworkPassword
 import Gnome.Keyring.Operation
 import Gnome.Keyring.Misc

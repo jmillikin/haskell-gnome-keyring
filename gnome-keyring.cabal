@@ -29,6 +29,7 @@ library
     Gnome.Keyring.ItemInfo
     Gnome.Keyring.Keyring
     Gnome.Keyring.KeyringInfo
+    Gnome.Keyring.NetworkPassword
     Gnome.Keyring.Operation
 
   other-modules:
