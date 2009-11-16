@@ -52,7 +52,7 @@ peekFound f = do
 
 stealFoundList :: Ptr (Ptr ()) -> IO [Found]
 stealFoundList ptr = bracket (peek ptr)
-	{# call unsafe gnome_keyring_found_list_free #}
+	{# call unsafe found_list_free #}
 	(mapGList peekFound)
 
 data GetFoundListCallback = GetFoundListCallback GetListCallbackPtr
