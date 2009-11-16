@@ -24,10 +24,12 @@ module Gnome.Keyring.NetworkPassword
 	( NetworkPassword (..)
 	, NetworkPasswordLocation (..)
 	, findNetworkPassword
+	, setNetworkPassword
 	) where
 import Control.Exception (bracket)
 import Data.Text.Lazy (Text)
-import Gnome.Keyring.Item (ItemID (..))
+import Gnome.Keyring.ItemInfo.Internal (ItemID (..))
+import Gnome.Keyring.Item.Internal (GetItemIDCallback, peekItemID)
 import Gnome.Keyring.Operation.Internal
 import Gnome.Keyring.Types
 import Foreign
@@ -88,6 +90,48 @@ findNetworkPassword loc = let
 	, withNullableText* `Maybe Text'
 	, fromIntegral `Word32'
 	, alloca- `[NetworkPassword]' stealPasswordList*
+	} -> `Result' result #}
+
+setNetworkPassword :: Maybe Text -> NetworkPasswordLocation -> Text ->
+                      Operation ItemID
+setNetworkPassword k loc secret = let
+	p1 = locationUser     loc
+	p2 = locationDomain   loc
+	p3 = locationServer   loc
+	p4 = locationObject   loc
+	p5 = locationProtocol loc
+	p6 = locationAuthType loc
+	p7 = locationPort     loc
+	in operation
+		(set_network_password k p1 p2 p3 p4 p5 p6 p7 secret)
+		(set_network_password_sync k p1 p2 p3 p4 p5 p6 p7 secret)
+
+{# fun unsafe set_network_password
+	{ withNullableText* `Maybe Text'
+	, withNullableText* `Maybe Text'
+	, withNullableText* `Maybe Text'
+	, withNullableText* `Maybe Text'
+	, withNullableText* `Maybe Text'
+	, withNullableText* `Maybe Text'
+	, withNullableText* `Maybe Text'
+	, fromIntegral `Word32'
+	, withText* `Text'
+	, callbackToPtr `GetItemIDCallback'
+	, id `Ptr ()'
+	, id `DestroyNotifyPtr'
+	} -> `CancellationKey' CancellationKey #}
+
+{# fun set_network_password_sync
+	{ withNullableText* `Maybe Text'
+	, withNullableText* `Maybe Text'
+	, withNullableText* `Maybe Text'
+	, withNullableText* `Maybe Text'
+	, withNullableText* `Maybe Text'
+	, withNullableText* `Maybe Text'
+	, withNullableText* `Maybe Text'
+	, fromIntegral `Word32'
+	, withText* `Text'
+	, alloca- `ItemID' peekItemID*
 	} -> `Result' result #}
 
 peekPassword :: Ptr () -> IO NetworkPassword

@@ -36,6 +36,7 @@ library
     Gnome.Keyring.AccessControl.Internal
     Gnome.Keyring.Attribute.Internal
     Gnome.Keyring.FFI
+    Gnome.Keyring.Item.Internal
     Gnome.Keyring.ItemInfo.Internal
     Gnome.Keyring.KeyringInfo.Internal
     Gnome.Keyring.Misc
