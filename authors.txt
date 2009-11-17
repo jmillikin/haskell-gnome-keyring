@@ -1,0 +1,5 @@
+Main author:
+John Millikin <jmillikin@gmail.com>
+
+Documentation copied from libgnome-keyring, written by:
+Stefan Walter <stef@memberwebs.com>

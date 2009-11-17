@@ -1,19 +1,27 @@
-{- Copyright (C) 2009 John Millikin <jmillikin@gmail.com>
-   
-   This program is free software: you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation, either version 3 of the License, or
-   any later version.
-   
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-   
-   You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.
--}
-
+-- Copyright (C) 2009 John Millikin <jmillikin@gmail.com>
+-- 
+-- This program is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU General Public License as published by
+-- the Free Software Foundation, either version 3 of the License, or
+-- any later version.
+-- 
+-- This program is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU General Public License for more details.
+-- 
+-- You should have received a copy of the GNU General Public License
+-- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+-- 
+-- |
+-- Maintainer  : John Millikin <jmillikin@gmail.com>
+-- Stability   : experimental
+-- Portability : non-portable (Typeclass extensions & FFI)
+-- 
+-- A find operation searches through all keyrings for items that match the
+-- given attributes. The user may be prompted to unlock necessary keyrings,
+-- and will be prompted for access to the items if needed.
+-- 
 {-# LANGUAGE ForeignFunctionInterface #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -35,7 +43,7 @@ import Gnome.Keyring.FFI
 import Gnome.Keyring.Types
 
 data Found = Found
-	{ foundKeyring    :: Text
+	{ foundKeyring    :: KeyringName
 	, foundItemID     :: ItemID
 	, foundAttributes :: [Attribute]
 	, foundSecret     :: Text
@@ -62,7 +70,12 @@ instance Callback GetFoundListCallback [Found] where
 	buildCallback = mkListCallback GetFoundListCallback
 		peekFound
 
--- find_items
+-- | Searches through all keyrings for items that match the attributes. The
+-- matches are for exact equality.
+-- 
+-- The user may be prompted to unlock necessary keyrings, and will be
+-- prompted for access to the items if needed.
+-- 
 findItems :: ItemType -> [Attribute] -> Operation [Found]
 findItems t as = operation
 	(find_items t as)

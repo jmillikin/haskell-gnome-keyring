@@ -1,19 +1,18 @@
-{- Copyright (C) 2009 John Millikin <jmillikin@gmail.com>
-   
-   This program is free software: you can redistribute it and/or modify
-   it under the terms of the GNU General Public License as published by
-   the Free Software Foundation, either version 3 of the License, or
-   any later version.
-   
-   This program is distributed in the hope that it will be useful,
-   but WITHOUT ANY WARRANTY; without even the implied warranty of
-   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-   GNU General Public License for more details.
-   
-   You should have received a copy of the GNU General Public License
-   along with this program.  If not, see <http://www.gnu.org/licenses/>.
--}
-
+-- Copyright (C) 2009 John Millikin <jmillikin@gmail.com>
+-- 
+-- This program is free software: you can redistribute it and/or modify
+-- it under the terms of the GNU General Public License as published by
+-- the Free Software Foundation, either version 3 of the License, or
+-- any later version.
+-- 
+-- This program is distributed in the hope that it will be useful,
+-- but WITHOUT ANY WARRANTY; without even the implied warranty of
+-- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+-- GNU General Public License for more details.
+-- 
+-- You should have received a copy of the GNU General Public License
+-- along with this program.  If not, see <http://www.gnu.org/licenses/>.
+-- 
 {-# LANGUAGE ForeignFunctionInterface #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -22,7 +21,7 @@
 
 module Gnome.Keyring.Item.Internal where
 
-import Data.Set (Set)
+import Data.Set (Set, toList)
 import Data.Text.Lazy (Text)
 import Gnome.Keyring.Operation.Internal
 import Gnome.Keyring.Types
@@ -45,8 +44,8 @@ peekItemID = fmap (ItemID . fromIntegral) . peek
 cItemID :: Integral a => ItemID -> a
 cItemID (ItemID x) = fromIntegral x
 
-cItemInfoFlags :: Bits a => [ItemInfoFlag] -> a
-cItemInfoFlags = foldr (.|.) 0 . map flagValue where
+cItemInfoFlags :: Bits a => Set ItemInfoFlag -> a
+cItemInfoFlags = foldr (.|.) 0 . map flagValue . toList where
 	flagValue ItemInfoBasics = 0
 	flagValue ItemInfoSecret = 1
 
@@ -93,8 +92,23 @@ type RawGetAttributesCallback = CInt -> Ptr () -> Ptr () -> IO ()
 foreign import ccall "wrapper"
 	wrapGetAttributesCallback :: RawGetAttributesCallback -> IO GetAttributesCallbackPtr
 
--- item_create
-itemCreate :: Maybe Text -> ItemType -> Text -> [Attribute] -> Text -> Bool
+-- | Create a new item in a keyring.
+-- 
+-- The user may have been prompted to unlock necessary keyrings. If 'Nothing'
+-- is specified as the keyring and no default keyring exists, the user will
+-- be prompted to create a new keyring.
+-- 
+-- If an existing item should be updated, the user may be prompted for access
+-- to the existing item.
+-- 
+-- Whether a new item is created or not, the ID of the item will be returned.
+-- 
+itemCreate :: Maybe KeyringName
+           -> ItemType
+           -> Text -- ^ Display name
+           -> [Attribute]
+           -> Text -- ^ The secret
+           -> Bool -- ^ Update an existing item, if one exists.
            -> Operation ItemID
 itemCreate k t dn as s u = operation
 	(item_create k t dn as s u)
@@ -122,8 +136,12 @@ itemCreate k t dn as s u = operation
 	, alloca- `ItemID' peekItemID*
 	} -> `Result' result #}
 
--- item_delete
-itemDelete :: Maybe Text -> ItemID -> Operation ()
+-- | Delete an item in a keyring.
+-- 
+-- The user may be prompted if the calling application doesn't have
+-- necessary access to delete the item.
+-- 
+itemDelete :: Maybe KeyringName -> ItemID -> Operation ()
 itemDelete k item = operation (item_delete k item) (item_delete_sync k item)
 
 {# fun item_delete
@@ -139,8 +157,12 @@ itemDelete k item = operation (item_delete k item) (item_delete_sync k item)
 	, cItemID `ItemID'
 	} -> `(Result, ())' resultAndTuple #}
 
--- item_get_info
-itemGetInfo :: Maybe Text -> ItemID -> Operation ItemInfo
+-- | Get information about an item and its secret.
+-- 
+-- The user may be prompted if the calling application doesn't have
+-- necessary access to read the item with its secret.
+-- 
+itemGetInfo :: Maybe KeyringName -> ItemID -> Operation ItemInfo
 itemGetInfo k item = operation
 	(item_get_info k item)
 	(item_get_info_sync k item)
@@ -159,8 +181,14 @@ itemGetInfo k item = operation
 	, alloca- `ItemInfo' stealItemInfo*
 	} -> `Result' result #}
 
--- item_get_info_full
-itemGetInfoFull :: Maybe Text -> ItemID -> [ItemInfoFlag] -> Operation ItemInfo
+-- | Get information about an item, optionally retrieving its secret.
+-- 
+-- If the flags include 'ItemInfoSecret', then the user may be prompted if
+-- the calling application doesn't have necessary access to read the item
+-- with its secret.
+-- 
+itemGetInfoFull :: Maybe KeyringName -> ItemID -> Set ItemInfoFlag
+                -> Operation ItemInfo
 itemGetInfoFull k item flags = operation
 	(item_get_info_full k item flags)
 	(item_get_info_full_sync k item flags)
@@ -168,7 +196,7 @@ itemGetInfoFull k item flags = operation
 {# fun item_get_info_full
 	{ withNullableText* `Maybe Text'
 	, cItemID `ItemID'
-	, cItemInfoFlags `[ItemInfoFlag]'
+	, cItemInfoFlags `Set ItemInfoFlag'
 	, callbackToPtr `GetItemInfoCallback'
 	, id `Ptr ()'
 	, id `DestroyNotifyPtr'
@@ -177,12 +205,16 @@ itemGetInfoFull k item flags = operation
 {# fun unsafe item_get_info_full_sync
 	{ withNullableText* `Maybe Text'
 	, cItemID `ItemID'
-	, cItemInfoFlags `[ItemInfoFlag]'
+	, cItemInfoFlags `Set ItemInfoFlag'
 	, alloca- `ItemInfo' stealItemInfo*
 	} -> `Result' result #}
 
--- item_set_info
-itemSetInfo :: Maybe Text -> ItemID -> ItemInfo -> Operation ()
+-- | Set information on an item, like its display name, secret, etc.
+-- 
+-- Only the fields in the info info which are non-'Nothing' or non-zero
+-- will be set on the item.
+-- 
+itemSetInfo :: Maybe KeyringName -> ItemID -> ItemInfo -> Operation ()
 itemSetInfo k item info = operation
 	(item_set_info k item info)
 	(item_set_info_sync k item info)
@@ -202,8 +234,9 @@ itemSetInfo k item info = operation
 	, withItemInfo* `ItemInfo'
 	} -> `(Result, ())' resultAndTuple #}
 
--- item_get_attributes
-itemGetAttributes :: Maybe Text -> ItemID -> Operation [Attribute]
+-- | Get all the attributes for an item.
+-- 
+itemGetAttributes :: Maybe KeyringName -> ItemID -> Operation [Attribute]
 itemGetAttributes k item = operation
 	(item_get_attributes k item)
 	(item_get_attributes_sync k item)
@@ -222,8 +255,10 @@ itemGetAttributes k item = operation
 	, alloca- `[Attribute]' stealAttributeList*
 	} -> `Result' result #}
 
--- item_set_attributes
-itemSetAttributes :: Maybe Text -> ItemID -> [Attribute] -> Operation ()
+-- | Set all the attributes for an item. These will replace any previous
+-- attributes set on the item.
+-- 
+itemSetAttributes :: Maybe KeyringName -> ItemID -> [Attribute] -> Operation ()
 itemSetAttributes k item as = operation
 	(item_set_attributes k item as)
 	(item_set_attributes_sync k item as)
@@ -243,8 +278,9 @@ itemSetAttributes k item as = operation
 	, withAttributeList* `[Attribute]'
 	} -> `(Result, ())' resultAndTuple #}
 
--- item_get_acl
-itemGetACL :: Maybe Text -> ItemID -> Operation [AccessControl]
+-- | Get the access control list for an item.
+-- 
+itemGetACL :: Maybe KeyringName -> ItemID -> Operation [AccessControl]
 itemGetACL k item = operation
 	(item_get_acl k item)
 	(item_get_acl_sync k item)
@@ -263,8 +299,10 @@ itemGetACL k item = operation
 	, alloca- `[AccessControl]' stealACL*
 	} -> `Result' result #}
 
--- item_set_acl
-itemSetACL :: Maybe Text -> ItemID -> [AccessControl] -> Operation ()
+-- | Set the full access control list on an item. This replaces any previous
+-- ACL set on the item.
+-- 
+itemSetACL :: Maybe KeyringName -> ItemID -> [AccessControl] -> Operation ()
 itemSetACL k item acl = operation
 	(item_set_acl k item acl)
 	(item_set_acl_sync k item acl)
@@ -284,9 +322,18 @@ itemSetACL k item acl = operation
 	, withACL* `[AccessControl]'
 	} -> `(Result, ())' resultAndTuple #}
 
--- item_grant_access_rights
-itemGrantAccessRights :: Maybe Text -> Text -> Text -> ItemID
-                      -> Set AccessType -> Operation ()
+-- | Will grant the application access rights to the item, provided callee
+-- has write access to said item.
+-- 
+-- This is similar to performing 'itemGetACL' and 'itemSetACL' with
+-- appropriate parameters.
+-- 
+itemGrantAccessRights :: Maybe KeyringName
+                      -> Text -- ^ Display name
+                      -> Text -- ^ Application executable path
+                      -> ItemID
+                      -> Set AccessType
+                      -> Operation ()
 itemGrantAccessRights k d p item r = operation
 	(item_grant_access_rights k d p item r)
 	(item_grant_access_rights_sync k d p item r)
