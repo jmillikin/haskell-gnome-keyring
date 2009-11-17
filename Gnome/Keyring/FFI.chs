@@ -42,7 +42,7 @@ withText = BS.useAsCString . BS.concat . BSL.toChunks . encodeUtf8
 
 peekText :: CString -> IO Text
 peekText cstr
-	| cstr == nullPtr = return $ Text.pack "(null)"
+	| cstr == nullPtr = error $ "Gnome.Keyring.FFI.peekText nullPtr"
 	| otherwise       = do
 		bytes <- BS.packCString cstr
 		return . decodeUtf8 . BSL.fromChunks $ [bytes]
