@@ -2,7 +2,7 @@ name: gnome-keyring
 version: 0.1
 synopsis: Bindings for libgnome-keyring
 license: GPL
-license-file: License.txt
+license-file: license.txt
 author: John Millikin
 maintainer: jmillikin@gmail.com
 build-type: Simple
