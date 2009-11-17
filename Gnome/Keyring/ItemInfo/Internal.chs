@@ -61,8 +61,8 @@ toItemType x = error $ "Unknown item type: " ++ show x
 -- | Note: setting mtime and ctime will not affect the keyring
 data ItemInfo = ItemInfo
 	{ itemType        :: ItemType
-	, itemSecret      :: Text
-	, itemDisplayName :: Text
+	, itemSecret      :: Maybe Text
+	, itemDisplayName :: Maybe Text
 	, itemMTime       :: Integer -- TODO: TimeOfDay
 	, itemCTime       :: Integer -- TODO: TimeOfDay
 	}
@@ -71,8 +71,8 @@ data ItemInfo = ItemInfo
 peekItemInfo :: Ptr () -> IO ItemInfo
 peekItemInfo info = do
 	cType <- {# call unsafe item_info_get_type #} info
-	secret <- stealText =<< {# call unsafe item_info_get_secret #} info
-	name <- stealText =<< {# call unsafe item_info_get_display_name #} info
+	secret <- stealNullableText =<< {# call unsafe item_info_get_secret #} info
+	name <- stealNullableText =<< {# call unsafe item_info_get_display_name #} info
 	mtime <- toInteger `fmap` {# call unsafe item_info_get_mtime #} info
 	ctime <- toInteger `fmap` {# call unsafe item_info_get_ctime #} info
 	let type' = toItemType . toEnum . fromIntegral $ cType
@@ -92,6 +92,6 @@ withItemInfo info io = do
 	fptr <- newForeignPtr finalizeItemInfo =<< {# call unsafe item_info_new #}
 	withForeignPtr fptr $ \ptr -> do
 	{# call unsafe item_info_set_type #} ptr . fromItemType . itemType $ info
-	withText (itemSecret info) $ {# call unsafe item_info_set_secret #} ptr
-	withText (itemDisplayName info) $ {# call unsafe item_info_set_display_name #} ptr
+	withNullableText (itemSecret info) $ {# call unsafe item_info_set_secret #} ptr
+	withNullableText (itemDisplayName info) $ {# call unsafe item_info_set_display_name #} ptr
 	io ptr
