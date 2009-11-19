@@ -369,7 +369,7 @@ itemSetAttributes k item as = voidOperation
 	, withAttributeList* `[Attribute]'
 	} -> `(Result, ())' resultAndTuple #}
 
--- $ access-control-doc
+-- $access-control-doc
 -- Each item has an access control list, which specifies which applications
 -- may read, write or delete an item. The read access applies only to reading
 -- the secret. All applications can read other parts of the item. ACLs are
