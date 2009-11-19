@@ -28,6 +28,7 @@ module Gnome.Keyring.Operation.Internal
 	, maybeTextOperation
 	, textListOperation
 	) where
+import Control.Monad (join)
 import Data.Text.Lazy (Text)
 import Foreign
 import Foreign.C
@@ -63,8 +64,7 @@ operationImpl impl asyncIO = Operation $ \onError onSuccess -> do
 	
 	destroy <- B.wrapDestroyNotify $ \ptr -> do
 		let stable = castPtrToStablePtr ptr
-		freeCallbacks <- deRefStablePtr stable
-		freeCallbacks
+		join $ deRefStablePtr stable
 		freeStablePtr stable
 	
 	stable <- newStablePtr $ do
