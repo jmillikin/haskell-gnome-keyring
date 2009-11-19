@@ -30,6 +30,7 @@ module Gnome.Keyring.ItemInfo.Internal
 	, fromItemType
 	, withItemInfo
 	, stealItemInfo
+	, peekItemID
 	) where
 import Data.Text.Lazy (Text)
 import Control.Exception (bracket)
@@ -40,6 +41,9 @@ import Gnome.Keyring.Operation.Internal
 
 newtype ItemID = ItemID Word32
 	deriving (Show, Eq, Ord)
+
+peekItemID :: (Storable a, Integral a) => Ptr a -> IO ItemID
+peekItemID = fmap (ItemID . fromIntegral) . peek
 
 {# enum GnomeKeyringItemType as RawType {} deriving (Show) #}
 

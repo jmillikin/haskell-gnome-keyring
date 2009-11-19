@@ -13,11 +13,36 @@
 -- You should have received a copy of the GNU General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 -- 
+-- |
+-- Maintainer  : John Millikin <jmillikin@gmail.com>
+-- Stability   : experimental
+-- Portability : non-portable (FFI)
+-- 
+-- A keyring contains multiple items. Each item has a secret, attributes and
+-- access information associated with it.
+-- 
+-- An item is identified by an 'ItemID' unique to the keyring in which it
+-- exists. An item's name is for displaying to the user. Each item has a
+-- single secret, which is Unicode text. This secret is stored in
+-- non-pageable memory in the server, and encrypted on disk. All of this
+-- information is exposed via 'ItemInfo' values.
+-- 
+-- Note that the underlying C library stores secrets in non-pageable memory,
+-- but the Haskell bindings currently do not.
+--
+-- Attributes allow various other pieces of information to be associated
+-- with an item. These can also be used to search for relevant items.
+--
+-- Each item has an access control list, which specifies which applications
+-- may read, write or delete an item. The read access applies only to
+-- reading the secret. All applications can read other parts of the item.
+-- ACLs are accessed and changed through 'AccessControl' values.
+-- 
 {-# LANGUAGE ForeignFunctionInterface #-}
 #include <gnome-keyring.h>
 {# context prefix = "gnome_keyring_" #}
 
-module Gnome.Keyring.Item.Internal
+module Gnome.Keyring.Item
 	( ItemInfoFlag (..)
 	, ItemID (..)
 	, itemCreate
@@ -30,8 +55,6 @@ module Gnome.Keyring.Item.Internal
 	, itemGetACL
 	, itemSetACL
 	, itemGrantAccessRights
-	
-	, peekItemID
 	) where
 
 import Data.Set (Set, toList)
@@ -50,9 +73,6 @@ data ItemInfoFlag
 	= ItemInfoBasics
 	| ItemInfoSecret
 	deriving (Show, Eq)
-
-peekItemID :: (Storable a, Integral a) => Ptr a -> IO ItemID
-peekItemID = fmap (ItemID . fromIntegral) . peek
 
 cItemID :: Integral a => ItemID -> a
 cItemID (ItemID x) = fromIntegral x
