@@ -266,7 +266,7 @@ attributeName (WordAttribute n _) = n
 withAttributeList :: [Attribute] -> (Ptr () -> IO a) -> IO a
 withAttributeList attrs io = bracket newList freeList buildList where
 	newList = {# call unsafe g_array_new #} 0 0 {# sizeof GnomeKeyringAttribute #}
-	buildList list = sequence (map (append list) attrs) >> io list
+	buildList list = mapM_ (append list) attrs >> io list
 	append list (TextAttribute n x) = appendString list n x
 	append list (WordAttribute n x) = appendUInt32 list n x
 

@@ -62,7 +62,7 @@ foreign import ccall "wrapper"
 
 keyringInfoOperation :: OperationImpl GetKeyringInfoCallback KeyringInfo
 keyringInfoOperation = operationImpl $ \checkResult ->
-	wrapGetKeyringInfoCallback $ \cres ptr _ -> do
+	wrapGetKeyringInfoCallback $ \cres ptr _ ->
 	checkResult cres $ peekKeyringInfo ptr
 
 copyInfo :: Ptr () -> IO (ForeignPtr ())
