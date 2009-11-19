@@ -43,23 +43,34 @@
 {# context prefix = "gnome_keyring_" #}
 
 module Gnome.Keyring.Item
-	( ItemID (..)
-	, ItemInfoFlag (..)
+	(
+	-- * Items
+	  ItemID (..)
 	, ItemType (..)
-	, ItemInfo (..)
 	
 	, itemCreate
 	, itemDelete
+	, itemGetAttributes
+	, itemSetAttributes
+	
+	-- * Item info
+	, ItemInfoFlag (..)
+	, ItemInfo (..)
 	, itemGetInfo
 	, itemGetInfoFull
 	, itemSetInfo
-	, itemGetAttributes
-	, itemSetAttributes
+	
+	-- * Access control
 	, itemGetACL
 	, itemSetACL
 	, itemGrantAccessRights
+	
+	-- * Searching for items
+	, FoundItem (..)
+	, findItems
 	) where
 
+import Control.Exception (bracket)
 import Data.Set (Set, toList)
 import Data.Text.Lazy (Text)
 import Gnome.Keyring.Operation.Internal
@@ -351,3 +362,55 @@ itemGrantAccessRights k d p item r = voidOperation
 	, cItemID `ItemID'
 	, cAccessTypes `Set AccessType'
 	} -> `(Result, ())' resultAndTuple #}
+
+data FoundItem = FoundItem
+	{ foundItemKeyring    :: KeyringName
+	, foundItemID         :: ItemID
+	, foundItemAttributes :: [Attribute]
+	, foundItemSecret     :: Text
+	}
+	deriving (Show, Eq)
+
+peekFound :: Ptr () -> IO FoundItem
+peekFound f = do
+	keyring <- peekText =<< {# get GnomeKeyringFound->keyring #} f
+	itemID <- {# get GnomeKeyringFound->item_id #} f
+	attrs <- peekAttributeList =<< {# get GnomeKeyringFound->attributes #} f
+	secret <- peekText =<< {# get GnomeKeyringFound->secret #} f
+	let itemID' = ItemID $ fromIntegral itemID
+	return $ FoundItem keyring itemID' attrs secret
+
+stealFoundList :: Ptr (Ptr ()) -> IO [FoundItem]
+stealFoundList ptr = bracket (peek ptr)
+	{# call unsafe found_list_free #}
+	(mapGList peekFound)
+
+foundItemsOperation :: OperationImpl GetListCallback [FoundItem]
+foundItemsOperation = operationImpl $ \checkResult ->
+	wrapGetListCallback $ \cres list _ ->
+	checkResult cres $ (mapGList peekFound) list
+
+-- | Searches through all keyrings for items that match the attributes. The
+-- matches are for exact equality.
+-- 
+-- The user may be prompted to unlock necessary keyrings, and will be
+-- prompted for access to the items if needed.
+-- 
+findItems :: ItemType -> [Attribute] -> Operation [FoundItem]
+findItems t as = foundItemsOperation
+	(find_items t as)
+	(find_items_sync t as)
+
+{# fun find_items
+	{ fromItemType `ItemType'
+	, withAttributeList* `[Attribute]'
+	, id `GetListCallbackPtr'
+	, id `Ptr ()'
+	, id `DestroyNotifyPtr'
+	} -> `CancellationKey' CancellationKey #}
+
+{# fun unsafe find_items_sync
+	{ fromItemType `ItemType'
+	, withAttributeList* `[Attribute]'
+	, alloca- `[FoundItem]' stealFoundList*
+	} -> `Result' result #}

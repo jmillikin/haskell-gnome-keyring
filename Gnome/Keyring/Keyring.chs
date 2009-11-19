@@ -52,7 +52,7 @@ import Data.Text.Lazy (Text)
 import Gnome.Keyring.Operation.Internal
 import Gnome.Keyring.ItemInfo
 import Gnome.Keyring.Types (Result, CancellationKey (..), KeyringName)
-import Gnome.Keyring.Find (findItems) -- for docs
+import Gnome.Keyring.Item (findItems) -- for docs
 
 -- Import unqualified for c2hs
 import Foreign

@@ -39,7 +39,6 @@ library
     Gnome.Keyring
     Gnome.Keyring.AccessControl
     Gnome.Keyring.Attribute
-    Gnome.Keyring.Find
     Gnome.Keyring.Item
     Gnome.Keyring.Keyring
     Gnome.Keyring.KeyringInfo
