@@ -18,7 +18,7 @@
 {# context prefix = "gnome_keyring_" #}
 
 module Gnome.Keyring.Misc where
-import Gnome.Keyring.Types (CancellationKey (..))
+import Gnome.Keyring.Internal.Types (CancellationKey (..))
 
 -- Import unqualified for c2hs
 import Foreign

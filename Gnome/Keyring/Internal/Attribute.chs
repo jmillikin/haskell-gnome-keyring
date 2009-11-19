@@ -17,7 +17,7 @@
 #include <gnome-keyring.h>
 {# context prefix = "gnome_keyring_" #}
 
-module Gnome.Keyring.Attribute.Internal
+module Gnome.Keyring.Internal.Attribute
 	( Attribute (..)
 	, attributeName
 	, GetAttributesCallbackPtr
@@ -31,8 +31,8 @@ import Data.Text.Lazy (Text)
 
 import Foreign
 import Foreign.C
-import Gnome.Keyring.FFI
-import Gnome.Keyring.Operation.Internal
+import Gnome.Keyring.Internal.FFI
+import Gnome.Keyring.Internal.Operation
 
 {# enum GnomeKeyringAttributeType as AttributeType {} #}
 

@@ -22,6 +22,6 @@ module Gnome.Keyring.Operation
 	, sync
 	, cancel
 	) where
-import Gnome.Keyring.Operation.Internal
-import Gnome.Keyring.Types
+import Gnome.Keyring.Internal.Operation
+import Gnome.Keyring.Internal.Types
 import Gnome.Keyring.Misc

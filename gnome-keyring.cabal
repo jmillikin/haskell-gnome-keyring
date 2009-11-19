@@ -46,14 +46,14 @@ library
     Gnome.Keyring.Operation
 
   other-modules:
-    Gnome.Keyring.AccessControl.Internal
-    Gnome.Keyring.Attribute.Internal
-    Gnome.Keyring.FFI
+    Gnome.Keyring.Internal.AccessControl
+    Gnome.Keyring.Internal.Attribute
+    Gnome.Keyring.Internal.FFI
+    Gnome.Keyring.Internal.KeyringInfo
+    Gnome.Keyring.Internal.Operation
+    Gnome.Keyring.Internal.Types
     Gnome.Keyring.ItemInfo
-    Gnome.Keyring.KeyringInfo.Internal
     Gnome.Keyring.Misc
-    Gnome.Keyring.Operation.Internal
-    Gnome.Keyring.Types
 
   extra-libraries: gnome-keyring
   pkgconfig-depends: gnome-keyring-1

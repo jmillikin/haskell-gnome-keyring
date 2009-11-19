@@ -36,8 +36,8 @@ import Data.Text.Lazy (Text)
 import Control.Exception (bracket)
 import Foreign
 import Foreign.C
-import Gnome.Keyring.FFI
-import Gnome.Keyring.Operation.Internal
+import Gnome.Keyring.Internal.FFI
+import Gnome.Keyring.Internal.Operation
 
 newtype ItemID = ItemID Word32
 	deriving (Show, Eq, Ord)

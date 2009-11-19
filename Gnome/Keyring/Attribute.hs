@@ -29,5 +29,5 @@ module Gnome.Keyring.Attribute
 	( Attribute (..)
 	, attributeName
 	) where
-import Gnome.Keyring.Attribute.Internal
+import Gnome.Keyring.Internal.Attribute
 import Gnome.Keyring.Item -- for docs

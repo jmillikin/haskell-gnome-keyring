@@ -17,7 +17,7 @@
 #include <gnome-keyring.h>
 {# context prefix = "gnome_keyring_info_" #}
 
-module Gnome.Keyring.KeyringInfo.Internal
+module Gnome.Keyring.Internal.KeyringInfo
 	( KeyringInfo (..)
 	, keyringSetLockOnIdle
 	, keyringSetLockTimeout
@@ -29,7 +29,7 @@ module Gnome.Keyring.KeyringInfo.Internal
 	) where
 import Foreign
 import Foreign.C
-import Gnome.Keyring.Operation.Internal
+import Gnome.Keyring.Internal.Operation
 
 -- Our keyring info populates/is populated by the native info structure.
 -- Clients can't create them directly, because GKR doesn't allow it.

@@ -17,7 +17,7 @@
 #include <gnome-keyring.h>
 {# context prefix = "gnome_keyring_" #}
 
-module Gnome.Keyring.AccessControl.Internal
+module Gnome.Keyring.Internal.AccessControl
 	( AccessControl (..)
 	, AccessType (..)
 	, accessControlListOperation
@@ -30,8 +30,8 @@ import Data.Set (Set, toList, fromList)
 import Data.Text.Lazy (Text)
 import Foreign
 import Foreign.C
-import Gnome.Keyring.FFI
-import Gnome.Keyring.Operation.Internal
+import Gnome.Keyring.Internal.FFI
+import Gnome.Keyring.Internal.Operation
 
 {# enum GnomeKeyringAccessType as RawAccessType {} deriving (Show) #}
 

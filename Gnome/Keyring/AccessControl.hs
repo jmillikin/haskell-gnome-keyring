@@ -27,5 +27,5 @@ module Gnome.Keyring.AccessControl
 	( AccessControl (..)
 	, AccessType (..)
 	) where
-import Gnome.Keyring.AccessControl.Internal
+import Gnome.Keyring.Internal.AccessControl
 import Gnome.Keyring.Item -- for docs

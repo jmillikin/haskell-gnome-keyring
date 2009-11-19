@@ -34,11 +34,11 @@ module Gnome.Keyring.NetworkPassword
 import Control.Exception (bracket)
 import Data.Text.Lazy (Text)
 import Gnome.Keyring.ItemInfo
-import Gnome.Keyring.Operation.Internal
-import Gnome.Keyring.Types
+import Gnome.Keyring.Internal.Operation
+import Gnome.Keyring.Internal.Types
 import Foreign
 import Foreign.C
-import Gnome.Keyring.FFI
+import Gnome.Keyring.Internal.FFI
 
 data NetworkPassword = NetworkPassword
 	{ networkPasswordKeyring  :: KeyringName

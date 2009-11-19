@@ -15,7 +15,7 @@
 -- 
 {-# LANGUAGE DeriveDataTypeable #-}
 #include <gnome-keyring.h>
-module Gnome.Keyring.Types where
+module Gnome.Keyring.Internal.Types where
 import Data.Text.Lazy (Text)
 import Foreign (Ptr)
 import Control.Exception (Exception)

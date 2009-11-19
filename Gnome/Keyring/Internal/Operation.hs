@@ -13,7 +13,7 @@
 -- You should have received a copy of the GNU General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 -- 
-module Gnome.Keyring.Operation.Internal
+module Gnome.Keyring.Internal.Operation
 	(
 	-- * Public API
 	  Operation
@@ -32,8 +32,8 @@ import Control.Monad (join)
 import Data.Text.Lazy (Text)
 import Foreign
 import Foreign.C
-import qualified Gnome.Keyring.Types as T
-import qualified Gnome.Keyring.FFI as B
+import qualified Gnome.Keyring.Internal.Types as T
+import qualified Gnome.Keyring.Internal.FFI as F
 import Control.Exception (throwIO)
 
 data Operation a = Operation
@@ -54,15 +54,15 @@ async' :: Operation a -> (T.Error -> IO ()) -> IO ()  -> IO T.CancellationKey
 async' op onError onSuccess = async op onError (const onSuccess)
 
 -- Implementation details of async operations
-type OperationImpl a b = (FunPtr a -> Ptr () -> B.DestroyNotifyPtr -> IO T.CancellationKey) -> IO (T.Result, b) -> Operation b
+type OperationImpl a b = (FunPtr a -> Ptr () -> F.DestroyNotifyPtr -> IO T.CancellationKey) -> IO (T.Result, b) -> Operation b
 operationImpl :: ((CInt -> IO a -> IO ()) -> IO (FunPtr b)) -> OperationImpl b a
 operationImpl impl asyncIO = Operation $ \onError onSuccess -> do
 	
-	callback <- impl $ \cres io -> case B.result cres of
+	callback <- impl $ \cres io -> case F.result cres of
 		T.RESULT_OK -> io >>= onSuccess
 		x -> onError $ T.resultToError x
 	
-	destroy <- B.wrapDestroyNotify $ \ptr -> do
+	destroy <- F.wrapDestroyNotify $ \ptr -> do
 		let stable = castPtrToStablePtr ptr
 		join $ deRefStablePtr stable
 		freeStablePtr stable
@@ -75,17 +75,17 @@ operationImpl impl asyncIO = Operation $ \onError onSuccess -> do
 
 -- Available basic operation types
 
-voidOperation :: OperationImpl B.DoneCallback ()
+voidOperation :: OperationImpl F.DoneCallback ()
 voidOperation = operationImpl $ \checkResult ->
-	B.wrapDoneCallback $ \cres _ ->
+	F.wrapDoneCallback $ \cres _ ->
 	checkResult cres $ return ()
 
-maybeTextOperation :: OperationImpl B.GetStringCallback (Maybe Text)
+maybeTextOperation :: OperationImpl F.GetStringCallback (Maybe Text)
 maybeTextOperation = operationImpl $ \checkResult ->
-	B.wrapGetStringCallback $ \cres cstr _ ->
-	checkResult cres $ B.peekNullableText cstr
+	F.wrapGetStringCallback $ \cres cstr _ ->
+	checkResult cres $ F.peekNullableText cstr
 
-textListOperation :: OperationImpl B.GetListCallback [Text]
+textListOperation :: OperationImpl F.GetListCallback [Text]
 textListOperation = operationImpl $ \checkResult ->
-	B.wrapGetListCallback $ \cres list _ ->
-	checkResult cres $ B.convertStringList list
+	F.wrapGetListCallback $ \cres list _ ->
+	checkResult cres $ F.convertStringList list

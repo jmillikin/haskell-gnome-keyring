@@ -15,14 +15,14 @@
 -- 
 {-# LANGUAGE ForeignFunctionInterface #-}
 #include <gnome-keyring.h>
-module Gnome.Keyring.FFI where
+module Gnome.Keyring.Internal.FFI where
 import Control.Exception (bracket)
 import Data.Text.Lazy (Text)
 import qualified Data.Text.Lazy as Text
 import Data.Text.Lazy.Encoding (encodeUtf8, decodeUtf8)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
-import qualified Gnome.Keyring.Types as T
+import qualified Gnome.Keyring.Internal.Types as T
 
 -- Import unqualified for c2hs
 import Foreign
