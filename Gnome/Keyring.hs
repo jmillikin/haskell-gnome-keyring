@@ -16,7 +16,7 @@
 -- |
 -- Maintainer  : John Millikin <jmillikin@gmail.com>
 -- Stability   : experimental
--- Portability : non-portable (Typeclass extensions & FFI)
+-- Portability : non-portable (FFI)
 -- 
 -- The GNOME Keyring is a service for securely storing per-user secret
 -- information, such as passwords and encryption keys. This library is
@@ -37,13 +37,13 @@ module Gnome.Keyring
 	, module Gnome.Keyring.NetworkPassword
 	, module Gnome.Keyring.Operation
 	) where
-import Gnome.Keyring.Keyring
-import Gnome.Keyring.KeyringInfo
 import Gnome.Keyring.AccessControl
 import Gnome.Keyring.Attribute
 import Gnome.Keyring.Find
 import Gnome.Keyring.Item
 import Gnome.Keyring.ItemInfo
+import Gnome.Keyring.Keyring
+import Gnome.Keyring.KeyringInfo
 import Gnome.Keyring.NetworkPassword
 import Gnome.Keyring.Operation
 import Gnome.Keyring.Misc

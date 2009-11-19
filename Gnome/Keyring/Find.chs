@@ -16,15 +16,13 @@
 -- |
 -- Maintainer  : John Millikin <jmillikin@gmail.com>
 -- Stability   : experimental
--- Portability : non-portable (Typeclass extensions & FFI)
+-- Portability : non-portable (FFI)
 -- 
 -- A find operation searches through all keyrings for items that match the
 -- given attributes. The user may be prompted to unlock necessary keyrings,
 -- and will be prompted for access to the items if needed.
 -- 
 {-# LANGUAGE ForeignFunctionInterface #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE FlexibleInstances #-}
 #include <gnome-keyring.h>
 {# context prefix = "gnome_keyring_" #}
 
@@ -63,12 +61,10 @@ stealFoundList ptr = bracket (peek ptr)
 	{# call unsafe found_list_free #}
 	(mapGList peekFound)
 
-data GetFoundListCallback = GetFoundListCallback GetListCallbackPtr
-instance Callback GetFoundListCallback [Found] where
-	callbackToPtr (GetFoundListCallback x) = castFunPtr x
-	freeCallback  (GetFoundListCallback x) = freeHaskellFunPtr x
-	buildCallback = mkListCallback GetFoundListCallback
-		peekFound
+foundItemsOperation :: OperationImpl GetListCallback [Found]
+foundItemsOperation = operationImpl $ \checkResult ->
+	wrapGetListCallback $ \cres list _ ->
+	checkResult cres $ (mapGList peekFound) list
 
 -- | Searches through all keyrings for items that match the attributes. The
 -- matches are for exact equality.
@@ -77,14 +73,14 @@ instance Callback GetFoundListCallback [Found] where
 -- prompted for access to the items if needed.
 -- 
 findItems :: ItemType -> [Attribute] -> Operation [Found]
-findItems t as = operation
+findItems t as = foundItemsOperation
 	(find_items t as)
 	(find_items_sync t as)
 
 {# fun find_items
 	{ fromItemType `ItemType'
 	, withAttributeList* `[Attribute]'
-	, callbackToPtr `GetFoundListCallback'
+	, id `GetListCallbackPtr'
 	, id `Ptr ()'
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}

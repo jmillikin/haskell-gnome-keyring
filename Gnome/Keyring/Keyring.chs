@@ -16,7 +16,7 @@
 -- |
 -- Maintainer  : John Millikin <jmillikin@gmail.com>
 -- Stability   : experimental
--- Portability : non-portable (Typeclass extensions & FFI)
+-- Portability : non-portable (FFI)
 -- 
 -- GNOME Keyring manages multiple keyrings. Each keyring can store one or
 -- more items, containing secrets.
@@ -29,8 +29,6 @@
 -- keyring.
 
 {-# LANGUAGE ForeignFunctionInterface #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE FlexibleInstances #-}
 #include <gnome-keyring.h>
 {# context prefix = "gnome_keyring_" #}
 
@@ -51,8 +49,8 @@ module Gnome.Keyring.Keyring
 	) where
 
 import Data.Text.Lazy (Text)
-import Gnome.Keyring.Operation.Internal (Operation, operation)
-import Gnome.Keyring.ItemInfo.Internal (ItemID (..))
+import Gnome.Keyring.Operation.Internal
+import Gnome.Keyring.ItemInfo.Internal
 import Gnome.Keyring.Types (Result, CancellationKey (..), KeyringName)
 import Gnome.Keyring.Find (findItems) -- for docs
 
@@ -66,12 +64,12 @@ import Gnome.Keyring.KeyringInfo.Internal
 -- 'Nothing' will be returned.
 -- 
 getDefaultKeyring :: Operation (Maybe KeyringName)
-getDefaultKeyring = operation
+getDefaultKeyring = maybeTextOperation
 	get_default_keyring
 	get_default_keyring_sync
 
 {# fun get_default_keyring
-	{ callbackToPtr `GetNullableStringCallback'
+	{ id `GetStringCallbackPtr'
 	, id `Ptr ()'
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
@@ -83,13 +81,13 @@ getDefaultKeyring = operation
 -- | Change the default keyring.
 -- 
 setDefaultKeyring :: KeyringName -> Operation ()
-setDefaultKeyring k = operation
+setDefaultKeyring k = voidOperation
 	(set_default_keyring k)
 	(set_default_keyring_sync k)
 
 {# fun set_default_keyring
 	{ withText* `Text'
-	, callbackToPtr `DoneCallback'
+	, id `DoneCallbackPtr'
 	, id `Ptr ()'
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
@@ -102,12 +100,12 @@ setDefaultKeyring k = operation
 -- will be returned.
 -- 
 listKeyringNames :: Operation [KeyringName]
-listKeyringNames = operation
+listKeyringNames = textListOperation
 	list_keyring_names
 	list_keyring_names_sync
 
 {# fun list_keyring_names
-	{ callbackToPtr `GetTextListCallback'
+	{ id `GetListCallbackPtr'
 	, id `Ptr ()'
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
@@ -121,12 +119,12 @@ listKeyringNames = operation
 -- password of their choice.
 -- 
 create :: KeyringName -> Maybe Text -> Operation ()
-create k p = operation (c_create k p) (create_sync k p)
+create k p = voidOperation (c_create k p) (create_sync k p)
 
 {# fun create as c_create
 	{ withText* `Text'
 	, withNullableText* `Maybe Text'
-	, callbackToPtr `DoneCallback'
+	, id `DoneCallbackPtr'
 	, id `Ptr ()'
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
@@ -140,11 +138,11 @@ create k p = operation (c_create k p) (create_sync k p)
 -- recovery of its contents.
 -- 
 delete :: KeyringName -> Operation ()
-delete k = operation (c_delete k) (delete_sync k)
+delete k = voidOperation (c_delete k) (delete_sync k)
 
 {# fun delete as c_delete
 	{ withText* `Text'
-	, callbackToPtr `DoneCallback'
+	, id `DoneCallbackPtr'
 	, id `Ptr ()'
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
@@ -160,11 +158,11 @@ delete k = operation (c_delete k) (delete_sync k)
 -- unlocked. One exception is 'findItems' and related computations.
 -- 
 lock :: Maybe KeyringName -> Operation ()
-lock k = operation (c_lock k) (lock_sync k)
+lock k = voidOperation (c_lock k) (lock_sync k)
 
 {# fun lock as c_lock
 	{ withNullableText* `Maybe Text'
-	, callbackToPtr `DoneCallback'
+	, id `DoneCallbackPtr'
 	, id `Ptr ()'
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
@@ -177,10 +175,10 @@ lock k = operation (c_lock k) (lock_sync k)
 -- without first unlocking them with a password.
 -- 
 lockAll :: Operation ()
-lockAll = operation lock_all lock_all_sync
+lockAll = voidOperation lock_all lock_all_sync
 
 {# fun lock_all
-	{ callbackToPtr `DoneCallback'
+	{ id `DoneCallbackPtr'
 	, id `Ptr ()'
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
@@ -196,12 +194,12 @@ lockAll = operation lock_all lock_all_sync
 -- unlocked. One exception is 'findItems' and related computations.
 -- 
 unlock :: Maybe KeyringName -> Maybe Text -> Operation ()
-unlock k p = operation (c_unlock k p) (unlock_sync k p)
+unlock k p = voidOperation (c_unlock k p) (unlock_sync k p)
 
 {# fun unlock as c_unlock
 	{ withNullableText* `Maybe Text'
 	, withNullableText* `Maybe Text'
-	, callbackToPtr `DoneCallback'
+	, id `DoneCallbackPtr'
 	, id `Ptr ()'
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
@@ -214,11 +212,11 @@ unlock k p = operation (c_unlock k p) (unlock_sync k p)
 -- | Get information about the keyring.
 -- 
 getInfo :: Maybe KeyringName -> Operation KeyringInfo
-getInfo k = operation (get_info k) (get_info_sync k)
+getInfo k = keyringInfoOperation (get_info k) (get_info_sync k)
 
 {# fun get_info
 	{ withNullableText* `Maybe Text'
-	, callbackToPtr `GetKeyringInfoCallback'
+	, id `GetKeyringInfoCallbackPtr'
 	, id `Ptr ()'
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
@@ -233,12 +231,14 @@ getInfo k = operation (get_info k) (get_info_sync k)
 -- 'keyringLockTimeout'.
 -- 
 setInfo :: Maybe KeyringName -> KeyringInfo -> Operation ()
-setInfo k info = operation (set_info k info) (set_info_sync k info)
+setInfo k info = voidOperation
+	(set_info k info)
+	(set_info_sync k info)
 
 {# fun set_info
 	{ withNullableText* `Maybe Text'
 	, withKeyringInfo* `KeyringInfo'
-	, callbackToPtr `DoneCallback'
+	, id `DoneCallbackPtr'
 	, id `Ptr ()'
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
@@ -256,7 +256,7 @@ changePassword :: KeyringName
                -> Maybe Text -- ^ Old password
                -> Maybe Text -- ^ New password
                -> Operation ()
-changePassword k op np = operation
+changePassword k op np = voidOperation
 	(change_password k op np)
 	(change_password_sync k op np)
 
@@ -264,7 +264,7 @@ changePassword k op np = operation
 	{ withText* `Text'
 	, withNullableText* `Maybe Text'
 	, withNullableText* `Maybe Text'
-	, callbackToPtr `DoneCallback'
+	, id `DoneCallbackPtr'
 	, id `Ptr ()'
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
@@ -279,23 +279,13 @@ changePassword k op np = operation
 -- not flagged as 'ItemApplicationSecret' are included in the list. This
 -- includes items that the calling application may not (yet) have access to.
 listItemIDs :: Maybe KeyringName -> Operation [ItemID]
-listItemIDs name = operation
+listItemIDs name = itemIDListOperation
 	(list_item_ids name)
 	(list_item_ids_sync name)
 
-data GetItemIDListCallback = GetItemIDListCallback GetListCallbackPtr
-instance Callback GetItemIDListCallback [ItemID] where
-	callbackToPtr (GetItemIDListCallback x) = castFunPtr x
-	freeCallback  (GetItemIDListCallback x) = freeHaskellFunPtr x
-	buildCallback = mkListCallback GetItemIDListCallback
-		(return . ItemID . fromIntegral . ptrToWordPtr)
-
-stealItemIDList :: Ptr (Ptr ()) -> IO [ItemID]
-stealItemIDList = fmap (map (ItemID . fromIntegral)) . stealWordList
-
 {# fun list_item_ids
 	{ withNullableText* `Maybe Text'
-	, callbackToPtr `GetItemIDListCallback'
+	, id `GetListCallbackPtr'
 	, id `Ptr ()'
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}

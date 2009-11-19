@@ -14,8 +14,6 @@
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 -- 
 {-# LANGUAGE ForeignFunctionInterface #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE FlexibleInstances #-}
 #include <gnome-keyring.h>
 {# context prefix = "gnome_keyring_" #}
 
@@ -49,49 +47,6 @@ cItemInfoFlags = foldr (.|.) 0 . map flagValue . toList where
 	flagValue ItemInfoBasics = 0
 	flagValue ItemInfoSecret = 1
 
--- wrap a GetWordCallback
-data GetItemIDCallback = GetItemIDCallback GetWordCallback
-instance Callback GetItemIDCallback ItemID where
-	callbackToPtr (GetItemIDCallback x) = callbackToPtr x
-	freeCallback (GetItemIDCallback x) = freeCallback x
-	buildCallback onSuccess = let
-		onSuccess' = onSuccess . ItemID
-		in fmap GetItemIDCallback . buildCallback onSuccess'
-
--- GnomeKeyringOperationGetItemInfoCallback
-data GetItemInfoCallback = GetItemInfoCallback GetItemInfoCallbackPtr
-instance Callback GetItemInfoCallback ItemInfo where
-	callbackToPtr (GetItemInfoCallback x) = castFunPtr x
-	freeCallback  (GetItemInfoCallback x) = freeHaskellFunPtr x
-	buildCallback onSuccess onError = do
-		funptr <- wrapGetItemInfoCallback $ \cres ptr _ ->
-			case result cres of
-				RESULT_OK -> peekItemInfo ptr >>= onSuccess
-				x -> onError $ resultToError x
-		return $ GetItemInfoCallback funptr
-
-type RawGetItemInfoCallback = CInt -> Ptr () -> Ptr () -> IO ()
-{# pointer GnomeKeyringOperationGetItemInfoCallback as GetItemInfoCallbackPtr #}
-foreign import ccall "wrapper"
-	wrapGetItemInfoCallback :: RawGetItemInfoCallback -> IO GetItemInfoCallbackPtr
-
--- GnomeKeyringOperationGetAttributesCallback
-data GetAttributesCallback = GetAttributesCallback GetAttributesCallbackPtr
-instance Callback GetAttributesCallback [Attribute] where
-	callbackToPtr (GetAttributesCallback x) = castFunPtr x
-	freeCallback  (GetAttributesCallback x) = freeHaskellFunPtr x
-	buildCallback onSuccess onError = do
-		funptr <- wrapGetAttributesCallback $ \cres ptr _ ->
-			case result cres of
-				RESULT_OK -> peekAttributeList ptr >>= onSuccess
-				x -> onError $ resultToError x
-		return $ GetAttributesCallback funptr
-
-type RawGetAttributesCallback = CInt -> Ptr () -> Ptr () -> IO ()
-{# pointer GnomeKeyringOperationGetAttributesCallback as GetAttributesCallbackPtr #}
-foreign import ccall "wrapper"
-	wrapGetAttributesCallback :: RawGetAttributesCallback -> IO GetAttributesCallbackPtr
-
 -- | Create a new item in a keyring.
 -- 
 -- The user may have been prompted to unlock necessary keyrings. If 'Nothing'
@@ -110,7 +65,7 @@ itemCreate :: Maybe KeyringName
            -> Text -- ^ The secret
            -> Bool -- ^ Update an existing item, if one exists.
            -> Operation ItemID
-itemCreate k t dn as s u = operation
+itemCreate k t dn as s u = itemIDOperation
 	(item_create k t dn as s u)
 	(item_create_sync k t dn as s u)
 
@@ -121,7 +76,7 @@ itemCreate k t dn as s u = operation
 	, withAttributeList* `[Attribute]'
 	, withText* `Text'
 	, fromBool `Bool'
-	, callbackToPtr `GetItemIDCallback'
+	, id `GetIntCallbackPtr'
 	, id `Ptr ()'
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
@@ -142,12 +97,14 @@ itemCreate k t dn as s u = operation
 -- necessary access to delete the item.
 -- 
 itemDelete :: Maybe KeyringName -> ItemID -> Operation ()
-itemDelete k item = operation (item_delete k item) (item_delete_sync k item)
+itemDelete k item = voidOperation
+	(item_delete k item)
+	(item_delete_sync k item)
 
 {# fun item_delete
 	{ withNullableText* `Maybe Text'
 	, cItemID `ItemID'
-	, callbackToPtr `DoneCallback'
+	, id `DoneCallbackPtr'
 	, id `Ptr ()'
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
@@ -163,14 +120,14 @@ itemDelete k item = operation (item_delete k item) (item_delete_sync k item)
 -- necessary access to read the item with its secret.
 -- 
 itemGetInfo :: Maybe KeyringName -> ItemID -> Operation ItemInfo
-itemGetInfo k item = operation
+itemGetInfo k item = itemInfoOperation
 	(item_get_info k item)
 	(item_get_info_sync k item)
 
 {# fun item_get_info
 	{ withNullableText* `Maybe Text'
 	, cItemID `ItemID'
-	, callbackToPtr `GetItemInfoCallback'
+	, id `GetItemInfoCallbackPtr'
 	, id `Ptr ()'
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
@@ -189,7 +146,7 @@ itemGetInfo k item = operation
 -- 
 itemGetInfoFull :: Maybe KeyringName -> ItemID -> Set ItemInfoFlag
                 -> Operation ItemInfo
-itemGetInfoFull k item flags = operation
+itemGetInfoFull k item flags = itemInfoOperation
 	(item_get_info_full k item flags)
 	(item_get_info_full_sync k item flags)
 
@@ -197,7 +154,7 @@ itemGetInfoFull k item flags = operation
 	{ withNullableText* `Maybe Text'
 	, cItemID `ItemID'
 	, cItemInfoFlags `Set ItemInfoFlag'
-	, callbackToPtr `GetItemInfoCallback'
+	, id `GetItemInfoCallbackPtr'
 	, id `Ptr ()'
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
@@ -215,7 +172,7 @@ itemGetInfoFull k item flags = operation
 -- will be set on the item.
 -- 
 itemSetInfo :: Maybe KeyringName -> ItemID -> ItemInfo -> Operation ()
-itemSetInfo k item info = operation
+itemSetInfo k item info = voidOperation
 	(item_set_info k item info)
 	(item_set_info_sync k item info)
 
@@ -223,7 +180,7 @@ itemSetInfo k item info = operation
 	{ withNullableText* `Maybe Text'
 	, cItemID `ItemID'
 	, withItemInfo* `ItemInfo'
-	, callbackToPtr `DoneCallback'
+	, id `DoneCallbackPtr'
 	, id `Ptr ()'
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
@@ -237,14 +194,14 @@ itemSetInfo k item info = operation
 -- | Get all the attributes for an item.
 -- 
 itemGetAttributes :: Maybe KeyringName -> ItemID -> Operation [Attribute]
-itemGetAttributes k item = operation
+itemGetAttributes k item = attributeListOperation
 	(item_get_attributes k item)
 	(item_get_attributes_sync k item)
 
 {# fun item_get_attributes
 	{ withNullableText* `Maybe Text'
 	, cItemID `ItemID'
-	, callbackToPtr `GetAttributesCallback'
+	, id `GetAttributesCallbackPtr'
 	, id `Ptr ()'
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
@@ -259,7 +216,7 @@ itemGetAttributes k item = operation
 -- attributes set on the item.
 -- 
 itemSetAttributes :: Maybe KeyringName -> ItemID -> [Attribute] -> Operation ()
-itemSetAttributes k item as = operation
+itemSetAttributes k item as = voidOperation
 	(item_set_attributes k item as)
 	(item_set_attributes_sync k item as)
 
@@ -267,7 +224,7 @@ itemSetAttributes k item as = operation
 	{ withNullableText* `Maybe Text'
 	, cItemID `ItemID'
 	, withAttributeList* `[Attribute]'
-	, callbackToPtr `DoneCallback'
+	, id `DoneCallbackPtr'
 	, id `Ptr ()'
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
@@ -281,14 +238,14 @@ itemSetAttributes k item as = operation
 -- | Get the access control list for an item.
 -- 
 itemGetACL :: Maybe KeyringName -> ItemID -> Operation [AccessControl]
-itemGetACL k item = operation
+itemGetACL k item = accessControlListOperation
 	(item_get_acl k item)
 	(item_get_acl_sync k item)
 
 {# fun item_get_acl
 	{ withNullableText* `Maybe Text'
 	, cItemID `ItemID'
-	, callbackToPtr `GetACLCallback'
+	, id `GetListCallbackPtr'
 	, id `Ptr ()'
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
@@ -303,7 +260,7 @@ itemGetACL k item = operation
 -- ACL set on the item.
 -- 
 itemSetACL :: Maybe KeyringName -> ItemID -> [AccessControl] -> Operation ()
-itemSetACL k item acl = operation
+itemSetACL k item acl = voidOperation
 	(item_set_acl k item acl)
 	(item_set_acl_sync k item acl)
 
@@ -311,7 +268,7 @@ itemSetACL k item acl = operation
 	{ withNullableText* `Maybe Text'
 	, cItemID `ItemID'
 	, withACL* `[AccessControl]'
-	, callbackToPtr `DoneCallback'
+	, id `DoneCallbackPtr'
 	, id `Ptr ()'
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
@@ -334,7 +291,7 @@ itemGrantAccessRights :: Maybe KeyringName
                       -> ItemID
                       -> Set AccessType
                       -> Operation ()
-itemGrantAccessRights k d p item r = operation
+itemGrantAccessRights k d p item r = voidOperation
 	(item_grant_access_rights k d p item r)
 	(item_grant_access_rights_sync k d p item r)
 
@@ -344,7 +301,7 @@ itemGrantAccessRights k d p item r = operation
 	, withText* `Text'
 	, cItemID `ItemID'
 	, cAccessTypes `Set AccessType'
-	, callbackToPtr `DoneCallback'
+	, id `DoneCallbackPtr'
 	, id `Ptr ()'
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}

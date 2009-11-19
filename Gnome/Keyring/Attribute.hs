@@ -16,7 +16,7 @@
 -- |
 -- Maintainer  : John Millikin <jmillikin@gmail.com>
 -- Stability   : experimental
--- Portability : non-portable (Typeclass extensions & FFI)
+-- Portability : non-portable (FFI)
 -- 
 -- Attributes allow various other pieces of information to be associated
 -- with an item. These can also be used to search for relevant items. Use

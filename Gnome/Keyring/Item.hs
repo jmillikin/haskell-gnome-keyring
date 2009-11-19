@@ -16,7 +16,7 @@
 -- |
 -- Maintainer  : John Millikin <jmillikin@gmail.com>
 -- Stability   : experimental
--- Portability : non-portable (Typeclass extensions & FFI)
+-- Portability : non-portable (FFI)
 -- 
 -- A keyring contains multiple items. Each item has a secret, attributes and
 -- access information associated with it.

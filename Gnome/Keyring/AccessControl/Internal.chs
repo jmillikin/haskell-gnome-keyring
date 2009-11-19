@@ -14,8 +14,6 @@
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 -- 
 {-# LANGUAGE ForeignFunctionInterface #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE FlexibleInstances #-}
 #include <gnome-keyring.h>
 {# context prefix = "gnome_keyring_" #}
 
@@ -25,7 +23,8 @@ import Data.Set (Set, toList, fromList)
 import Data.Text.Lazy (Text)
 import Foreign
 import Foreign.C
-import Gnome.Keyring.FFI hiding (g_list_free)
+import Gnome.Keyring.FFI
+import Gnome.Keyring.Operation.Internal
 
 {# enum GnomeKeyringAccessType as RawAccessType {} deriving (Show) #}
 
@@ -99,9 +98,7 @@ toAccessType ACCESS_READ   = AccessRead
 toAccessType ACCESS_WRITE  = AccessWrite
 toAccessType ACCESS_REMOVE = AccessRemove
 
-data GetACLCallback = GetACLCallback GetListCallbackPtr
-instance Callback GetACLCallback [AccessControl] where
-	callbackToPtr (GetACLCallback x) = castFunPtr x
-	freeCallback  (GetACLCallback x) = freeHaskellFunPtr x
-	buildCallback = mkListCallback GetACLCallback
-		peekAccessControl
+accessControlListOperation :: OperationImpl GetListCallback [AccessControl]
+accessControlListOperation = operationImpl $ \checkResult ->
+	wrapGetListCallback $ \cres list _ ->
+	checkResult cres $ mapGList peekAccessControl list

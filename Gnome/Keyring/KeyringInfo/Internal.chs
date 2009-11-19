@@ -14,17 +14,13 @@
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 -- 
 {-# LANGUAGE ForeignFunctionInterface #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
 #include <gnome-keyring.h>
 {# context prefix = "gnome_keyring_info_" #}
 
 module Gnome.Keyring.KeyringInfo.Internal where
-
--- Import unqualified for c2hs
 import Foreign
 import Foreign.C
-import Gnome.Keyring.FFI
-import Gnome.Keyring.Types
+import Gnome.Keyring.Operation.Internal
 
 -- Our keyring info populates/is populated by the native info structure.
 -- Clients can't create them directly, because GKR doesn't allow it.
@@ -49,23 +45,17 @@ keyringSetLockTimeout :: KeyringInfo -> Word32 -> KeyringInfo
 keyringSetLockTimeout info x = info {keyringLockTimeout = x}
 
 -- GnomeKeyringOperationGetKeyringInfoCallback
-data GetKeyringInfoCallback = GetKeyringInfoCallback GetKeyringInfoCallbackPtr
-instance Callback GetKeyringInfoCallback KeyringInfo where
-	callbackToPtr (GetKeyringInfoCallback x) = castFunPtr x
-	freeCallback  (GetKeyringInfoCallback x) = freeHaskellFunPtr x
-	buildCallback onSuccess onError = do
-		funptr <- wrapGetKeyringInfoCallback $ \cres ptr _ -> do
-			case result cres of
-				RESULT_OK -> peekKeyringInfo ptr >>= onSuccess
-				x -> onError $ resultToError x
-		return $ GetKeyringInfoCallback funptr
-
-type RawGetKeyringInfoCallback = CInt -> Ptr () -> Ptr () -> IO ()
+type GetKeyringInfoCallback = CInt -> Ptr () -> Ptr () -> IO ()
 {# pointer GnomeKeyringOperationGetKeyringInfoCallback
 	as GetKeyringInfoCallbackPtr #}
 foreign import ccall "wrapper"
-	wrapGetKeyringInfoCallback :: RawGetKeyringInfoCallback
+	wrapGetKeyringInfoCallback :: GetKeyringInfoCallback
 	                           -> IO GetKeyringInfoCallbackPtr
+
+keyringInfoOperation :: OperationImpl GetKeyringInfoCallback KeyringInfo
+keyringInfoOperation = operationImpl $ \checkResult ->
+	wrapGetKeyringInfoCallback $ \cres ptr _ -> do
+	checkResult cres $ peekKeyringInfo ptr
 
 copyInfo :: Ptr () -> IO (ForeignPtr ())
 copyInfo = (newForeignPtr finalizeKeyringInfo =<<) . {# call unsafe copy as c_copy #}

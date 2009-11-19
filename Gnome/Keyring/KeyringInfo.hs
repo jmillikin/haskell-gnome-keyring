@@ -16,7 +16,7 @@
 -- |
 -- Maintainer  : John Millikin <jmillikin@gmail.com>
 -- Stability   : experimental
--- Portability : non-portable (Typeclass extensions & FFI)
+-- Portability : non-portable (FFI)
 -- 
 -- Use 'getInfo' or 'setInfo' to modify information about particular
 -- keyrings.

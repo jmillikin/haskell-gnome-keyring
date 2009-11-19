@@ -14,7 +14,6 @@
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 -- 
 {-# LANGUAGE ForeignFunctionInterface #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
 #include <gnome-keyring.h>
 {# context prefix = "gnome_keyring_" #}
 
@@ -24,6 +23,7 @@ import Control.Exception (bracket)
 import Foreign
 import Foreign.C
 import Gnome.Keyring.FFI
+import Gnome.Keyring.Operation.Internal
 
 newtype ItemID = ItemID Word32
 	deriving (Show, Eq, Ord)
@@ -94,3 +94,30 @@ withItemInfo info io = do
 	withNullableText (itemSecret info) $ {# call unsafe item_info_set_secret #} ptr
 	withNullableText (itemDisplayName info) $ {# call unsafe item_info_set_display_name #} ptr
 	io ptr
+
+itemIDListOperation :: OperationImpl GetListCallback [ItemID]
+itemIDListOperation = operationImpl $ \checkResult ->
+	wrapGetListCallback $ \cres ptr _ ->
+	checkResult cres $ peekItemIDList ptr
+
+peekItemIDList :: Ptr () -> IO [ItemID]
+peekItemIDList = mapGList $ return . ItemID . fromIntegral . ptrToWordPtr
+
+stealItemIDList :: Ptr (Ptr ()) -> IO [ItemID]
+stealItemIDList ptr = bracket (peek ptr) freeList peekItemIDList where
+	freeList = {# call unsafe g_list_free #}
+
+type GetItemInfoCallback = CInt -> Ptr () -> Ptr () -> IO ()
+{# pointer GnomeKeyringOperationGetItemInfoCallback as GetItemInfoCallbackPtr #}
+foreign import ccall "wrapper"
+	wrapGetItemInfoCallback :: GetItemInfoCallback -> IO GetItemInfoCallbackPtr
+
+itemIDOperation :: OperationImpl GetIntCallback ItemID
+itemIDOperation = operationImpl $ \checkResult ->
+	wrapGetIntCallback $ \cres cint _ ->
+	checkResult cres $ return . ItemID . fromIntegral $ cint
+
+itemInfoOperation :: OperationImpl GetItemInfoCallback ItemInfo
+itemInfoOperation = operationImpl $ \checkResult ->
+	wrapGetItemInfoCallback $ \cres ptr _ ->
+	checkResult cres $ peekItemInfo ptr

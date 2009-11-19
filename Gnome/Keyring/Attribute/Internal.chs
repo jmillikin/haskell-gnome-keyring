@@ -24,6 +24,7 @@ import Data.Text.Lazy (Text)
 import Foreign
 import Foreign.C
 import Gnome.Keyring.FFI
+import Gnome.Keyring.Operation.Internal
 
 {# enum GnomeKeyringAttributeType as AttributeType {} #}
 
@@ -85,3 +86,13 @@ stealAttributeList ptr = bracket (peek ptr) freeList peekAttributeList
 
 freeList :: Ptr () -> IO ()
 freeList = {# call unsafe attribute_list_free #}
+
+type GetAttributesCallback = CInt -> Ptr () -> Ptr () -> IO ()
+{# pointer GnomeKeyringOperationGetAttributesCallback as GetAttributesCallbackPtr #}
+foreign import ccall "wrapper"
+	wrapGetAttributesCallback :: GetAttributesCallback -> IO GetAttributesCallbackPtr
+
+attributeListOperation :: OperationImpl GetAttributesCallback [Attribute]
+attributeListOperation = operationImpl $ \checkResult ->
+	wrapGetAttributesCallback $ \cres array _ ->
+	checkResult cres $ peekAttributeList array

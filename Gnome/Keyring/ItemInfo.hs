@@ -16,7 +16,7 @@
 -- |
 -- Maintainer  : John Millikin <jmillikin@gmail.com>
 -- Stability   : experimental
--- Portability : non-portable (Typeclass extensions & FFI)
+-- Portability : non-portable (FFI)
 -- 
 -- 'ItemInfo' represents the basic information about a keyring item. Use
 -- 'itemGetInfo' or 'itemSetInfo' to manipulate item information in the

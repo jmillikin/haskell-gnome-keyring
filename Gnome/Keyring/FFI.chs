@@ -14,9 +14,6 @@
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 -- 
 {-# LANGUAGE ForeignFunctionInterface #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE FlexibleInstances #-}
 #include <gnome-keyring.h>
 module Gnome.Keyring.FFI where
 import Control.Exception (bracket)
@@ -89,121 +86,37 @@ stealTextList ptr = do
 	{# call unsafe gnome_keyring_string_list_free #} list
 	return items
 
-stealWordList :: Ptr (Ptr ()) -> IO [Integer]
-stealWordList ptr = do
-	list <- peek ptr
-	items <- mapGList (return . toInteger . ptrToWordPtr) list
-	{# call unsafe g_list_free #} list
-	return items
+freeStringList :: Ptr () -> IO ()
+freeStringList = {# call unsafe gnome_keyring_string_list_free #}
 
 --------------
 
+-- GDestroyNotify
 type DestroyNotify = Ptr () -> IO ()
 {# pointer GDestroyNotify as DestroyNotifyPtr #}
 foreign import ccall "wrapper"
 	wrapDestroyNotify :: DestroyNotify -> IO DestroyNotifyPtr
 
---------------
-
-class Callback a b | a -> b where
-	callbackToPtr :: a -> FunPtr z
-	freeCallback :: a -> IO ()
-	buildCallback :: (b -> IO ()) -> (T.Error -> IO ()) -> IO a
-
 -- GnomeKeyringOperationDoneCallback
-data DoneCallback = DoneCallback DoneCallbackPtr
-instance Callback DoneCallback () where
-	callbackToPtr (DoneCallback x) = castFunPtr x
-	freeCallback  (DoneCallback x) = freeHaskellFunPtr x
-	buildCallback onSuccess onError = do
-		funptr <- wrapDoneCallback $ \cres _ ->
-			case result cres of
-				T.RESULT_OK -> onSuccess ()
-				x -> onError $ T.resultToError x
-		return $ DoneCallback funptr
-
-type RawDoneCallback = CInt -> Ptr () -> IO ()
+type DoneCallback = CInt -> Ptr () -> IO ()
 {# pointer GnomeKeyringOperationDoneCallback as DoneCallbackPtr #}
 foreign import ccall "wrapper"
-	wrapDoneCallback :: RawDoneCallback -> IO DoneCallbackPtr
+	wrapDoneCallback :: DoneCallback -> IO DoneCallbackPtr
 
 -- GnomeKeyringOperationGetStringCallback
-data GetStringCallback = GetStringCallback GetStringCallbackPtr
-instance Callback GetStringCallback Text where
-	callbackToPtr (GetStringCallback x) = castFunPtr x
-	freeCallback  (GetStringCallback x) = freeHaskellFunPtr x
-	buildCallback onSuccess onError = do
-		funptr <- wrapGetStringCallback $ \cres cstr _ ->
-			case result cres of
-				T.RESULT_OK -> do
-					str <- peekCString cstr
-					onSuccess (Text.pack str)
-				x -> onError $ T.resultToError x
-		return $ GetStringCallback funptr
-
-data GetNullableStringCallback = GetNullableStringCallback GetStringCallbackPtr
-instance Callback GetNullableStringCallback (Maybe Text) where
-	callbackToPtr (GetNullableStringCallback x) = castFunPtr x
-	freeCallback  (GetNullableStringCallback x) = freeHaskellFunPtr x
-	buildCallback onSuccess onError = do
-		funptr <- wrapGetStringCallback $ \cres cstr _ ->
-			case result cres of
-				T.RESULT_OK -> peekNullableText cstr >>= onSuccess
-				x -> onError $ T.resultToError x
-		return $ GetNullableStringCallback funptr
-
-type RawGetStringCallback = CInt -> CString -> Ptr () -> IO ()
+type GetStringCallback = CInt -> CString -> Ptr () -> IO ()
 {# pointer GnomeKeyringOperationGetStringCallback as GetStringCallbackPtr #}
 foreign import ccall "wrapper"
-	wrapGetStringCallback :: RawGetStringCallback -> IO GetStringCallbackPtr
+	wrapGetStringCallback :: GetStringCallback -> IO GetStringCallbackPtr
 
 -- GnomeKeyringOperationGetIntCallback
-data GetWordCallback = GetWordCallback GetIntCallbackPtr
-instance Callback GetWordCallback Word32 where
-	callbackToPtr (GetWordCallback x) = castFunPtr x
-	freeCallback  (GetWordCallback x) = freeHaskellFunPtr x
-	buildCallback onSuccess onError = do
-		funptr <- wrapGetIntCallback $ \cres cint _ ->
-			case result cres of
-				T.RESULT_OK -> onSuccess $ fromIntegral cint
-				x -> onError $ T.resultToError x
-		return $ GetWordCallback funptr
-
-type RawGetIntCallback = CInt -> CUInt -> Ptr () -> IO ()
+type GetIntCallback = CInt -> CUInt -> Ptr () -> IO ()
 {# pointer GnomeKeyringOperationGetIntCallback as GetIntCallbackPtr #}
 foreign import ccall "wrapper"
-	wrapGetIntCallback :: RawGetIntCallback -> IO GetIntCallbackPtr
+	wrapGetIntCallback :: GetIntCallback -> IO GetIntCallbackPtr
 
 -- GnomeKeyringOperationGetListCallback
-mkListCallback :: (GetListCallbackPtr -> a)
-               -> (Ptr () -> IO b)
-               -> ([b] -> IO ())
-               -> (T.Error -> IO ())
-               -> IO a
-mkListCallback mkCallback f onSuccess onError = do
-	funptr <- wrapGetListCallback $ \cres list _ ->
-		case result cres of
-			T.RESULT_OK -> do
-				items <- mapGList f list
-				onSuccess items
-			x -> onError $ T.resultToError x
-	return $ mkCallback funptr
-
-data GetTextListCallback = GetTextListCallback GetListCallbackPtr
-instance Callback GetTextListCallback [Text] where
-	callbackToPtr (GetTextListCallback x) = castFunPtr x
-	freeCallback  (GetTextListCallback x) = freeHaskellFunPtr x
-	buildCallback = mkListCallback GetTextListCallback
-		(peekText . castPtr)
-
-data GetWordListCallback = GetWordListCallback GetListCallbackPtr
-instance Callback GetWordListCallback [Integer] where
-	callbackToPtr (GetWordListCallback x) = castFunPtr x
-	freeCallback  (GetWordListCallback x) = freeHaskellFunPtr x
-	buildCallback = mkListCallback GetWordListCallback
-		(return . toInteger . ptrToWordPtr)
-
-type RawGetListCallback = CInt -> Ptr () -> Ptr () -> IO ()
+type GetListCallback = CInt -> Ptr () -> Ptr () -> IO ()
 {# pointer GnomeKeyringOperationGetListCallback as GetListCallbackPtr #}
 foreign import ccall "wrapper"
-	wrapGetListCallback :: RawGetListCallback -> IO GetListCallbackPtr
+	wrapGetListCallback :: GetListCallback -> IO GetListCallbackPtr
