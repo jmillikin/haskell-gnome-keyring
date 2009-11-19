@@ -77,7 +77,7 @@ findNetworkPassword loc = let
 		(find_network_password p1 p2 p3 p4 p5 p6 p7)
 		(find_network_password_sync p1 p2 p3 p4 p5 p6 p7)
 
-{# fun unsafe find_network_password
+{# fun find_network_password
 	{ withNullableText* `Maybe Text'
 	, withNullableText* `Maybe Text'
 	, withNullableText* `Maybe Text'
@@ -90,7 +90,7 @@ findNetworkPassword loc = let
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
-{# fun find_network_password_sync
+{# fun unsafe find_network_password_sync
 	{ withNullableText* `Maybe Text'
 	, withNullableText* `Maybe Text'
 	, withNullableText* `Maybe Text'
@@ -125,7 +125,7 @@ setNetworkPassword k loc secret = let
 		(set_network_password k p1 p2 p3 p4 p5 p6 p7 secret)
 		(set_network_password_sync k p1 p2 p3 p4 p5 p6 p7 secret)
 
-{# fun unsafe set_network_password
+{# fun set_network_password
 	{ withNullableText* `Maybe Text'
 	, withNullableText* `Maybe Text'
 	, withNullableText* `Maybe Text'
@@ -140,7 +140,7 @@ setNetworkPassword k loc secret = let
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
-{# fun set_network_password_sync
+{# fun unsafe set_network_password_sync
 	{ withNullableText* `Maybe Text'
 	, withNullableText* `Maybe Text'
 	, withNullableText* `Maybe Text'
