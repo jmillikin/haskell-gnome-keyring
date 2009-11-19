@@ -43,8 +43,11 @@
 {# context prefix = "gnome_keyring_" #}
 
 module Gnome.Keyring.Item
-	( ItemInfoFlag (..)
-	, ItemID (..)
+	( ItemID (..)
+	, ItemInfoFlag (..)
+	, ItemType (..)
+	, ItemInfo (..)
+	
 	, itemCreate
 	, itemDelete
 	, itemGetInfo
@@ -63,7 +66,7 @@ import Gnome.Keyring.Operation.Internal
 import Gnome.Keyring.Types
 import Gnome.Keyring.AccessControl.Internal
 import Gnome.Keyring.Attribute.Internal
-import Gnome.Keyring.ItemInfo.Internal
+import Gnome.Keyring.ItemInfo
 
 import Foreign
 import Foreign.C

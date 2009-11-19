@@ -50,7 +50,7 @@ module Gnome.Keyring.Keyring
 
 import Data.Text.Lazy (Text)
 import Gnome.Keyring.Operation.Internal
-import Gnome.Keyring.ItemInfo.Internal
+import Gnome.Keyring.ItemInfo
 import Gnome.Keyring.Types (Result, CancellationKey (..), KeyringName)
 import Gnome.Keyring.Find (findItems) -- for docs
 

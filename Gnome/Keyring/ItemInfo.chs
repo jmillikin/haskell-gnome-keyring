@@ -17,7 +17,7 @@
 #include <gnome-keyring.h>
 {# context prefix = "gnome_keyring_" #}
 
-module Gnome.Keyring.ItemInfo.Internal
+module Gnome.Keyring.ItemInfo
 	( ItemInfo (..)
 	, ItemType (..)
 	, ItemID (..)

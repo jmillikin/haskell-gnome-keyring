@@ -33,7 +33,7 @@ module Gnome.Keyring.NetworkPassword
 	) where
 import Control.Exception (bracket)
 import Data.Text.Lazy (Text)
-import Gnome.Keyring.ItemInfo.Internal
+import Gnome.Keyring.ItemInfo
 import Gnome.Keyring.Operation.Internal
 import Gnome.Keyring.Types
 import Foreign
