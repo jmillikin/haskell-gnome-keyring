@@ -15,7 +15,13 @@
 -- 
 {-# LANGUAGE DeriveDataTypeable #-}
 #include <gnome-keyring.h>
-module Gnome.Keyring.Internal.Types where
+module Gnome.Keyring.Internal.Types
+	( KeyringName
+	, CancellationKey (..)
+	, Error (..)
+	, Result (..)
+	, resultToError
+	) where
 import Data.Text.Lazy (Text)
 import Foreign (Ptr)
 import Control.Exception (Exception)

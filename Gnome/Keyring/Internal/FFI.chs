@@ -15,7 +15,42 @@
 -- 
 {-# LANGUAGE ForeignFunctionInterface #-}
 #include <gnome-keyring.h>
-module Gnome.Keyring.Internal.FFI where
+module Gnome.Keyring.Internal.FFI
+	(
+	-- * Callbacks
+	  DestroyNotify
+	, DestroyNotifyPtr
+	, wrapDestroyNotify
+	
+	, DoneCallback
+	, DoneCallbackPtr
+	, wrapDoneCallback
+	
+	, GetStringCallback
+	, GetStringCallbackPtr
+	, wrapGetStringCallback
+	
+	, GetIntCallback
+	, GetIntCallbackPtr
+	, wrapGetIntCallback
+	
+	, GetListCallback
+	, GetListCallbackPtr
+	, wrapGetListCallback
+	
+	-- * Marshaling helpers
+	, result
+	, resultAndTuple
+	, withText
+	, peekText
+	, withNullableText
+	, peekNullableText
+	, stealNullableText
+	, stealNullableTextPtr
+	, stealTextList
+	, convertStringList
+	, mapGList
+	) where
 import Control.Exception (bracket)
 import Data.Text.Lazy (Text)
 import qualified Data.Text.Lazy as Text
@@ -50,17 +85,11 @@ withNullableText = maybeWith withText
 peekNullableText :: CString -> IO (Maybe Text)
 peekNullableText = maybePeek peekText
 
-stealText :: CString -> IO Text
-stealText cstr = bracket (return cstr) free peekText
-
 stealNullableText :: CString -> IO (Maybe Text)
 stealNullableText cstr = bracket (return cstr) free peekNullableText
 
 stealPeek :: (Ptr a -> IO b) -> Ptr (Ptr a) -> IO b
 stealPeek io ptr = bracket (peek ptr) free io
-
-stealTextPtr :: Ptr CString -> IO Text
-stealTextPtr = stealPeek peekText
 
 stealNullableTextPtr :: Ptr CString -> IO (Maybe Text)
 stealNullableTextPtr = stealPeek peekNullableText
@@ -85,9 +114,6 @@ stealTextList ptr = do
 	items <- convertStringList list
 	{# call unsafe gnome_keyring_string_list_free #} list
 	return items
-
-freeStringList :: Ptr () -> IO ()
-freeStringList = {# call unsafe gnome_keyring_string_list_free #}
 
 --------------
 
