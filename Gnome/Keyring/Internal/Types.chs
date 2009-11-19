@@ -21,6 +21,8 @@ module Gnome.Keyring.Internal.Types
 	, Error (..)
 	, Result (..)
 	, resultToError
+	, result
+	, resultAndTuple
 	) where
 import Data.Text.Lazy (Text)
 import Foreign (Ptr)
@@ -60,3 +62,9 @@ resultToError RESULT_CANCELLED = ErrorCancelled
 resultToError RESULT_KEYRING_ALREADY_EXISTS = ErrorKeyringAlreadyExists
 resultToError RESULT_NO_MATCH = ErrorNoMatch
 resultToError x = error $ "Not an error: " ++ show x
+
+result :: Integral a => a -> Result
+result = toEnum . fromIntegral
+
+resultAndTuple :: Integral a => a -> (Result, ())
+resultAndTuple x = (result x, ())

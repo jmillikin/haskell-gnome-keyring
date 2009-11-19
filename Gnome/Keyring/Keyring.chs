@@ -48,6 +48,7 @@ module Gnome.Keyring.Keyring
 	, listItemIDs
 	) where
 
+import Control.Exception (bracket)
 import Data.Text.Lazy (Text)
 import Gnome.Keyring.Item (findItems) -- for docs
 import Gnome.Keyring.ItemInfo
@@ -73,6 +74,9 @@ getDefaultKeyring = maybeTextOperation
 {# fun unsafe get_default_keyring_sync
 	{ alloca- `Maybe Text' stealNullableTextPtr*
 	} -> `Result' result #}
+
+stealNullableTextPtr :: Ptr CString -> IO (Maybe Text)
+stealNullableTextPtr ptr = bracket (peek ptr) free peekNullableText
 
 -- | Change the default keyring.
 -- 
@@ -109,6 +113,11 @@ listKeyringNames = textListOperation
 {# fun unsafe list_keyring_names_sync
 	{ alloca- `[Text]' stealTextList*
 	} -> `Result' result #}
+
+stealTextList :: Ptr (Ptr ()) -> IO [Text]
+stealTextList ptr = bracket (peek ptr)
+	{# call unsafe gnome_keyring_string_list_free #}
+	(mapGList peekText)
 
 -- | Create a new keyring with the specified name. In most cases, 'Nothing'
 -- will be passed as the password, which will prompt the user to enter a

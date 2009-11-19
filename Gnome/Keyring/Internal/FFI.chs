@@ -39,16 +39,11 @@ module Gnome.Keyring.Internal.FFI
 	, wrapGetListCallback
 	
 	-- * Marshaling helpers
-	, result
-	, resultAndTuple
 	, withText
 	, peekText
 	, withNullableText
 	, peekNullableText
 	, stealNullableText
-	, stealNullableTextPtr
-	, stealTextList
-	, convertStringList
 	, mapGList
 	
 	-- * Re-export, since any clients of this module will need Foreign
@@ -62,17 +57,10 @@ import qualified Data.Text.Lazy as Text
 import Data.Text.Lazy.Encoding (encodeUtf8, decodeUtf8)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
-import qualified Gnome.Keyring.Internal.Types as T
 
 -- Import unqualified for c2hs
 import Foreign
 import Foreign.C
-
-result :: CInt -> T.Result
-result = toEnum . fromIntegral
-
-resultAndTuple :: CInt -> (T.Result, ())
-resultAndTuple x = (result x, ())
 
 withText :: Text -> (CString -> IO a) -> IO a
 withText = BS.useAsCString . BS.concat . BSL.toChunks . encodeUtf8
@@ -93,32 +81,16 @@ peekNullableText = maybePeek peekText
 stealNullableText :: CString -> IO (Maybe Text)
 stealNullableText cstr = bracket (return cstr) free peekNullableText
 
-stealPeek :: (Ptr a -> IO b) -> Ptr (Ptr a) -> IO b
-stealPeek io ptr = bracket (peek ptr) free io
-
-stealNullableTextPtr :: Ptr CString -> IO (Maybe Text)
-stealNullableTextPtr = stealPeek peekNullableText
-
 -- Convert GList to []
-mapGList :: (Ptr () -> IO a) -> Ptr () -> IO [a]
+mapGList :: (Ptr a -> IO b) -> Ptr () -> IO [b]
 mapGList f list
 	| list == nullPtr = return []
 	| otherwise = do
 		item <- {# get GList->data #} list
 		next <- {# get GList->next #} list
 		items <- mapGList f next
-		item' <- f item
+		item' <- f $ castPtr item
 		return $ item' : items
-
-convertStringList :: Ptr () -> IO [Text]
-convertStringList = mapGList (peekText . castPtr)
-
-stealTextList :: Ptr (Ptr ()) -> IO [Text]
-stealTextList ptr = do
-	list <- peek ptr
-	items <- convertStringList list
-	{# call unsafe gnome_keyring_string_list_free #} list
-	return items
 
 --------------
 

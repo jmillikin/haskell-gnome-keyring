@@ -86,4 +86,4 @@ maybeTextOperation = operationImpl $ \checkResult ->
 textListOperation :: OperationImpl GetListCallback [Text]
 textListOperation = operationImpl $ \checkResult ->
 	wrapGetListCallback $ \cres list _ ->
-	checkResult cres $ convertStringList list
+	checkResult cres $ mapGList peekText list
