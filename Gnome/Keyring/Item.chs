@@ -282,19 +282,6 @@ withAttributeList attrs io = bracket newList freeList buildList where
 	, fromIntegral `Word32'
 	} -> `()' id #}
 
-peekAttributeList :: Ptr () -> IO [Attribute]
-peekAttributeList array = do
-	len <- {# get GArray->len #} array
-	start <- {# get GArray->data #} array
-	peekAttributeList' (fromIntegral len) (castPtr start)
-
-peekAttributeList' :: Integer -> Ptr () -> IO [Attribute]
-peekAttributeList' 0   _ = return []
-peekAttributeList' n ptr = do
-	attr <- peekAttribute ptr
-	attrs <- peekAttributeList' (n - 1) (plusPtr ptr {# sizeof GnomeKeyringAttribute #})
-	return $ attr : attrs
-
 peekAttribute :: Ptr () -> IO Attribute
 peekAttribute attr = do
 	name <- peekText =<< {# get GnomeKeyringAttribute->name #} attr
@@ -306,6 +293,9 @@ peekAttribute attr = do
 		ATTRIBUTE_TYPE_UINT32 -> do
 			cValue <- {# get GnomeKeyringAttribute.value.integer #} attr
 			return $ WordAttribute name $ fromIntegral cValue
+
+peekAttributeList :: Ptr () -> IO [Attribute]
+peekAttributeList = mapGArray peekAttribute {# sizeof GnomeKeyringAttribute #}
 
 stealAttributeList :: Ptr (Ptr ()) -> IO [Attribute]
 stealAttributeList ptr = bracket (peek ptr) freeList peekAttributeList

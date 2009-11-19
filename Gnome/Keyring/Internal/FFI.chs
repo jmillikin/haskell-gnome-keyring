@@ -45,6 +45,7 @@ module Gnome.Keyring.Internal.FFI
 	, peekNullableText
 	, stealNullableText
 	, mapGList
+	, mapGArray
 	
 	-- * Re-export, since any clients of this module will need Foreign
 	-- and Foreign.C anyway.
@@ -91,6 +92,20 @@ mapGList f list
 		items <- mapGList f next
 		item' <- f $ castPtr item
 		return $ item' : items
+
+-- Convert GArray to []
+mapGArray :: (Ptr a -> IO b) -> Int -> Ptr () -> IO [b]
+mapGArray f size array = do
+	len <- {# get GArray->len #} array
+	start <- {# get GArray->data #} array
+	mapGArray' f size (fromIntegral len) (castPtr start)
+
+mapGArray' :: (Ptr a -> IO b) -> Int -> Integer -> Ptr () -> IO [b]
+mapGArray' _    _ 0   _ = return []
+mapGArray' f size n ptr = do
+	attr <- f $ castPtr ptr
+	attrs <- mapGArray' f size (n - 1) (plusPtr ptr size)
+	return $ attr : attrs
 
 --------------
 
