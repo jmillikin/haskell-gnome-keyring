@@ -100,11 +100,6 @@ fromAccessType AccessRead   = ACCESS_READ
 fromAccessType AccessWrite  = ACCESS_WRITE
 fromAccessType AccessRemove = ACCESS_REMOVE
 
-toAccessType :: RawAccessType -> AccessType
-toAccessType ACCESS_READ   = AccessRead
-toAccessType ACCESS_WRITE  = AccessWrite
-toAccessType ACCESS_REMOVE = AccessRemove
-
 accessControlListOperation :: OperationImpl GetListCallback [AccessControl]
 accessControlListOperation = operationImpl $ \checkResult ->
 	wrapGetListCallback $ \cres list _ ->
