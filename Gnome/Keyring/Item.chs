@@ -264,7 +264,7 @@ attributeName (TextAttribute n _) = n
 attributeName (WordAttribute n _) = n
 
 withAttributeList :: [Attribute] -> (Ptr () -> IO a) -> IO a
-withAttributeList attrs io = bracket newList freeList buildList where
+withAttributeList attrs io = bracket newList freeAttributeList buildList where
 	newList = {# call unsafe g_array_new #} 0 0 {# sizeof GnomeKeyringAttribute #}
 	buildList list = mapM_ (append list) attrs >> io list
 	append list (TextAttribute n x) = appendString list n x
@@ -298,10 +298,10 @@ peekAttributeList :: Ptr () -> IO [Attribute]
 peekAttributeList = mapGArray peekAttribute {# sizeof GnomeKeyringAttribute #}
 
 stealAttributeList :: Ptr (Ptr ()) -> IO [Attribute]
-stealAttributeList ptr = bracket (peek ptr) freeList peekAttributeList
+stealAttributeList ptr = bracket (peek ptr) freeAttributeList peekAttributeList
 
-freeList :: Ptr () -> IO ()
-freeList = {# call unsafe attribute_list_free #}
+freeAttributeList :: Ptr () -> IO ()
+freeAttributeList = {# call unsafe attribute_list_free #}
 
 type GetAttributesCallback = CInt -> Ptr () -> Ptr () -> IO ()
 {# pointer GnomeKeyringOperationGetAttributesCallback as GetAttributesCallbackPtr #}
