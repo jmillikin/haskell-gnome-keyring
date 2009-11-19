@@ -17,7 +17,15 @@
 #include <gnome-keyring.h>
 {# context prefix = "gnome_keyring_" #}
 
-module Gnome.Keyring.Attribute.Internal where
+module Gnome.Keyring.Attribute.Internal
+	( Attribute (..)
+	, attributeName
+	, GetAttributesCallbackPtr
+	, attributeListOperation
+	, withAttributeList
+	, peekAttributeList
+	, stealAttributeList
+	) where
 import Control.Exception (bracket)
 import Data.Text.Lazy (Text)
 

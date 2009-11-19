@@ -17,7 +17,20 @@
 #include <gnome-keyring.h>
 {# context prefix = "gnome_keyring_" #}
 
-module Gnome.Keyring.ItemInfo.Internal where
+module Gnome.Keyring.ItemInfo.Internal
+	( ItemInfo (..)
+	, ItemType (..)
+	, ItemID (..)
+	
+	, GetItemInfoCallbackPtr
+	, itemIDOperation
+	, itemIDListOperation
+	, stealItemIDList
+	, itemInfoOperation
+	, fromItemType
+	, withItemInfo
+	, stealItemInfo
+	) where
 import Data.Text.Lazy (Text)
 import Control.Exception (bracket)
 import Foreign

@@ -17,7 +17,16 @@
 #include <gnome-keyring.h>
 {# context prefix = "gnome_keyring_info_" #}
 
-module Gnome.Keyring.KeyringInfo.Internal where
+module Gnome.Keyring.KeyringInfo.Internal
+	( KeyringInfo (..)
+	, keyringSetLockOnIdle
+	, keyringSetLockTimeout
+	
+	, GetKeyringInfoCallbackPtr
+	, keyringInfoOperation
+	, withKeyringInfo
+	, stealKeyringInfoPtr
+	) where
 import Foreign
 import Foreign.C
 import Gnome.Keyring.Operation.Internal

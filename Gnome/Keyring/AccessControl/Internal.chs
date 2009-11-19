@@ -17,7 +17,14 @@
 #include <gnome-keyring.h>
 {# context prefix = "gnome_keyring_" #}
 
-module Gnome.Keyring.AccessControl.Internal where
+module Gnome.Keyring.AccessControl.Internal
+	( AccessControl (..)
+	, AccessType (..)
+	, accessControlListOperation
+	, withACL
+	, stealACL
+	, cAccessTypes
+	) where
 import Control.Exception (bracket)
 import Data.Set (Set, toList, fromList)
 import Data.Text.Lazy (Text)
