@@ -27,16 +27,12 @@
 -- 
 module Gnome.Keyring
 	( available
-	, module Gnome.Keyring.AccessControl
-	, module Gnome.Keyring.Attribute
 	, module Gnome.Keyring.Item
 	, module Gnome.Keyring.Keyring
 	, module Gnome.Keyring.KeyringInfo
 	, module Gnome.Keyring.NetworkPassword
 	, module Gnome.Keyring.Operation
 	) where
-import Gnome.Keyring.AccessControl
-import Gnome.Keyring.Attribute
 import Gnome.Keyring.Item
 import Gnome.Keyring.Keyring
 import Gnome.Keyring.KeyringInfo

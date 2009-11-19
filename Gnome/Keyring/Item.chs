@@ -50,6 +50,11 @@ module Gnome.Keyring.Item
 	
 	, itemCreate
 	, itemDelete
+	
+	-- * Item attributes
+	-- $attribute-doc
+	, Attribute (..)
+	, attributeName
 	, itemGetAttributes
 	, itemSetAttributes
 	
@@ -61,6 +66,9 @@ module Gnome.Keyring.Item
 	, itemSetInfo
 	
 	-- * Access control
+	-- $access-control-doc
+	, AccessControl (..)
+	, AccessType (..)
 	, itemGetACL
 	, itemSetACL
 	, itemGrantAccessRights
@@ -71,12 +79,10 @@ module Gnome.Keyring.Item
 	) where
 
 import Control.Exception (bracket)
-import Data.Set (Set, toList)
+import Data.Set (Set, toList, fromList)
 import Data.Text.Lazy (Text)
 import Gnome.Keyring.Internal.Operation
 import Gnome.Keyring.Internal.Types
-import Gnome.Keyring.Internal.AccessControl
-import Gnome.Keyring.Internal.Attribute
 import Gnome.Keyring.ItemInfo
 
 import Foreign
@@ -240,6 +246,85 @@ itemSetInfo k item info = voidOperation
 	, withItemInfo* `ItemInfo'
 	} -> `(Result, ())' resultAndTuple #}
 
+-- $attribute-doc
+-- Attributes allow various other pieces of information to be associated
+-- with an item. These can also be used to search for relevant items. Use
+-- 'itemGetAttributes' or 'itemSetAttributes' to manipulate attributes in
+-- the keyring.
+-- 
+-- Each attribute is either Unicode text, or an unsigned 32-bit integer.
+
+{# enum GnomeKeyringAttributeType as AttributeType {} #}
+
+data Attribute
+	= TextAttribute Text Text
+	| WordAttribute Text Word32
+	deriving (Show, Eq)
+
+attributeName :: Attribute -> Text
+attributeName (TextAttribute n _) = n
+attributeName (WordAttribute n _) = n
+
+withAttributeList :: [Attribute] -> (Ptr () -> IO a) -> IO a
+withAttributeList attrs io = bracket newList freeList buildList where
+	newList = {# call unsafe g_array_new #} 0 0 {# sizeof GnomeKeyringAttribute #}
+	buildList list = sequence (map (append list) attrs) >> io list
+	append list (TextAttribute n x) = appendString list n x
+	append list (WordAttribute n x) = appendUInt32 list n x
+
+{# fun unsafe attribute_list_append_string as appendString
+	{ id `Ptr ()'
+	, withText* `Text'
+	, withText* `Text'
+	} -> `()' id #}
+
+{# fun unsafe attribute_list_append_uint32 as appendUInt32
+	{ id `Ptr ()'
+	, withText* `Text'
+	, fromIntegral `Word32'
+	} -> `()' id #}
+
+peekAttributeList :: Ptr () -> IO [Attribute]
+peekAttributeList array = do
+	len <- {# get GArray->len #} array
+	start <- {# get GArray->data #} array
+	peekAttributeList' (fromIntegral len) (castPtr start)
+
+peekAttributeList' :: Integer -> Ptr () -> IO [Attribute]
+peekAttributeList' 0   _ = return []
+peekAttributeList' n ptr = do
+	attr <- peekAttribute ptr
+	attrs <- peekAttributeList' (n - 1) (plusPtr ptr {# sizeof GnomeKeyringAttribute #})
+	return $ attr : attrs
+
+peekAttribute :: Ptr () -> IO Attribute
+peekAttribute attr = do
+	name <- peekText =<< {# get GnomeKeyringAttribute->name #} attr
+	cType <- {# get GnomeKeyringAttribute->type #} attr
+	case toEnum . fromIntegral $ cType of
+		ATTRIBUTE_TYPE_STRING -> do
+			value <- peekText =<< {# get GnomeKeyringAttribute.value.string #} attr
+			return $ TextAttribute name value
+		ATTRIBUTE_TYPE_UINT32 -> do
+			cValue <- {# get GnomeKeyringAttribute.value.integer #} attr
+			return $ WordAttribute name $ fromIntegral cValue
+
+stealAttributeList :: Ptr (Ptr ()) -> IO [Attribute]
+stealAttributeList ptr = bracket (peek ptr) freeList peekAttributeList
+
+freeList :: Ptr () -> IO ()
+freeList = {# call unsafe attribute_list_free #}
+
+type GetAttributesCallback = CInt -> Ptr () -> Ptr () -> IO ()
+{# pointer GnomeKeyringOperationGetAttributesCallback as GetAttributesCallbackPtr #}
+foreign import ccall "wrapper"
+	wrapGetAttributesCallback :: GetAttributesCallback -> IO GetAttributesCallbackPtr
+
+attributeListOperation :: OperationImpl GetAttributesCallback [Attribute]
+attributeListOperation = operationImpl $ \checkResult ->
+	wrapGetAttributesCallback $ \cres array _ ->
+	checkResult cres $ peekAttributeList array
+
 -- | Get all the attributes for an item.
 -- 
 itemGetAttributes :: Maybe KeyringName -> ItemID -> Operation [Attribute]
@@ -283,6 +368,84 @@ itemSetAttributes k item as = voidOperation
 	, cItemID `ItemID'
 	, withAttributeList* `[Attribute]'
 	} -> `(Result, ())' resultAndTuple #}
+
+-- $ access-control-doc
+-- Each item has an access control list, which specifies which applications
+-- may read, write or delete an item. The read access applies only to reading
+-- the secret. All applications can read other parts of the item. ACLs are
+-- accessed and changed with 'itemGetACL' and 'itemSetACL'.
+
+{# enum GnomeKeyringAccessType as RawAccessType {} deriving (Show) #}
+
+data AccessType
+	= AccessRead
+	| AccessWrite
+	| AccessRemove
+	deriving (Show, Eq, Ord)
+
+data AccessControl = AccessControl
+	{ accessControlName :: Maybe Text
+	, accessControlPath :: Maybe Text
+	, accessControlType :: Set AccessType
+	}
+	deriving (Show, Eq)
+
+peekAccessControl :: Ptr () -> IO AccessControl
+peekAccessControl ac = do
+	name <- stealNullableText =<< {# call unsafe item_ac_get_display_name #} ac
+	path <- stealNullableText =<< {# call unsafe item_ac_get_path_name #} ac
+	cType <- {# call unsafe item_ac_get_access_type #} ac
+	return $ AccessControl name path $ peekAccessType cType
+
+stealACL :: Ptr (Ptr ()) -> IO [AccessControl]
+stealACL ptr = bracket (peek ptr) freeACL (mapGList peekAccessControl)
+
+withACL :: [AccessControl] -> (Ptr () -> IO a) -> IO a
+withACL acl = bracket (buildACL acl) freeACL
+
+buildACL :: [AccessControl] -> IO (Ptr ())
+buildACL acs = bracket
+	{# call unsafe application_ref_new #}
+	{# call unsafe application_ref_free #} $ \appRef ->
+	buildACL' appRef acs nullPtr
+
+buildACL' :: Ptr () -> [AccessControl] -> Ptr () -> IO (Ptr ())
+buildACL'      _       [] list = return list
+buildACL' appRef (ac:acs) list = buildAC appRef ac
+	>>= {# call unsafe g_list_append #} list
+	>>= buildACL' appRef acs
+
+buildAC :: Ptr () -> AccessControl -> IO (Ptr ())
+buildAC appRef ac = do
+	let cAllowed = cAccessTypes $ accessControlType ac
+	ptr <- {# call unsafe access_control_new #} appRef cAllowed
+	withNullableText (accessControlName ac) $ {# call unsafe item_ac_set_display_name #} ptr
+	withNullableText (accessControlPath ac) $ {# call unsafe item_ac_set_path_name #} ptr
+	return ptr
+
+freeACL :: Ptr () -> IO ()
+freeACL = {# call unsafe acl_free #}
+
+cAccessTypes :: Bits a => Set AccessType -> a
+cAccessTypes = foldr (.|.) 0 . map (fromIntegral . fromEnum . fromAccessType) . toList where
+
+peekAccessType :: Integral a => a -> Set AccessType
+peekAccessType cint = fromList $ concat
+	[ [AccessRead   | int .&. fromEnum ACCESS_READ   > 0]
+	, [AccessWrite  | int .&. fromEnum ACCESS_WRITE  > 0]
+	, [AccessRemove | int .&. fromEnum ACCESS_REMOVE > 0]
+	]
+	where int = fromIntegral cint
+
+fromAccessType :: AccessType -> RawAccessType
+fromAccessType AccessRead   = ACCESS_READ
+fromAccessType AccessWrite  = ACCESS_WRITE
+fromAccessType AccessRemove = ACCESS_REMOVE
+
+accessControlListOperation :: OperationImpl GetListCallback [AccessControl]
+accessControlListOperation = operationImpl $ \checkResult ->
+	wrapGetListCallback $ \cres list _ ->
+	checkResult cres $ mapGList peekAccessControl list
 
 -- | Get the access control list for an item.
 -- 

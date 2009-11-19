@@ -37,8 +37,6 @@ library
 
   exposed-modules:
     Gnome.Keyring
-    Gnome.Keyring.AccessControl
-    Gnome.Keyring.Attribute
     Gnome.Keyring.Item
     Gnome.Keyring.Keyring
     Gnome.Keyring.KeyringInfo
@@ -46,8 +44,6 @@ library
     Gnome.Keyring.Operation
 
   other-modules:
-    Gnome.Keyring.Internal.AccessControl
-    Gnome.Keyring.Internal.Attribute
     Gnome.Keyring.Internal.FFI
     Gnome.Keyring.Internal.KeyringInfo
     Gnome.Keyring.Internal.Operation
