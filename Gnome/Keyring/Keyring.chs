@@ -49,16 +49,12 @@ module Gnome.Keyring.Keyring
 	) where
 
 import Data.Text.Lazy (Text)
-import Gnome.Keyring.Internal.Operation
-import Gnome.Keyring.ItemInfo
-import Gnome.Keyring.Internal.Types (Result, CancellationKey (..), KeyringName)
 import Gnome.Keyring.Item (findItems) -- for docs
-
--- Import unqualified for c2hs
-import Foreign
-import Foreign.C
+import Gnome.Keyring.ItemInfo
 import Gnome.Keyring.Internal.FFI
 import Gnome.Keyring.Internal.KeyringInfo
+import Gnome.Keyring.Internal.Operation
+import Gnome.Keyring.Internal.Types
 
 -- | Get the default keyring name. If no default keyring exists, then
 -- 'Nothing' will be returned.

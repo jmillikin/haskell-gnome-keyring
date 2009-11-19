@@ -31,5 +31,5 @@ module Gnome.Keyring.KeyringInfo
 	, keyringSetLockOnIdle
 	, keyringSetLockTimeout
 	) where
-import Gnome.Keyring.Internal.KeyringInfo
 import Gnome.Keyring.Keyring -- for docs
+import Gnome.Keyring.Internal.KeyringInfo

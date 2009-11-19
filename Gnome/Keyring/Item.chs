@@ -81,13 +81,11 @@ module Gnome.Keyring.Item
 import Control.Exception (bracket)
 import Data.Set (Set, toList, fromList)
 import Data.Text.Lazy (Text)
+
+import Gnome.Keyring.ItemInfo
+import Gnome.Keyring.Internal.FFI
 import Gnome.Keyring.Internal.Operation
 import Gnome.Keyring.Internal.Types
-import Gnome.Keyring.ItemInfo
-
-import Foreign
-import Foreign.C
-import Gnome.Keyring.Internal.FFI
 
 data ItemInfoFlag
 	= ItemInfoBasics

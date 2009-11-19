@@ -28,17 +28,15 @@ module Gnome.Keyring.Internal.Operation
 	, maybeTextOperation
 	, textListOperation
 	) where
+import Control.Exception (throwIO)
 import Control.Monad (join)
 import Data.Text.Lazy (Text)
-import Foreign
-import Foreign.C
-import qualified Gnome.Keyring.Internal.Types as T
-import qualified Gnome.Keyring.Internal.FFI as F
-import Control.Exception (throwIO)
+import Gnome.Keyring.Internal.FFI
+import Gnome.Keyring.Internal.Types
 
 data Operation a = Operation
-	{ async    :: (T.Error -> IO ()) -> (a -> IO ()) -> IO T.CancellationKey
-	, syncImpl :: IO (T.Result, a)
+	{ async    :: (Error -> IO ()) -> (a -> IO ()) -> IO CancellationKey
+	, syncImpl :: IO (Result, a)
 	}
 
 -- Synchronous operation public API
@@ -46,23 +44,23 @@ sync :: Operation a -> IO a
 sync op = do
 	(res, x) <- syncImpl op
 	case res of
-		T.RESULT_OK -> return x
-		_           -> throwIO $ T.resultToError res
+		RESULT_OK -> return x
+		_           -> throwIO $ resultToError res
 
 -- Helper for async operations which return nothing useful
-async' :: Operation a -> (T.Error -> IO ()) -> IO ()  -> IO T.CancellationKey
+async' :: Operation a -> (Error -> IO ()) -> IO ()  -> IO CancellationKey
 async' op onError onSuccess = async op onError (const onSuccess)
 
 -- Implementation details of async operations
-type OperationImpl a b = (FunPtr a -> Ptr () -> F.DestroyNotifyPtr -> IO T.CancellationKey) -> IO (T.Result, b) -> Operation b
+type OperationImpl a b = (FunPtr a -> Ptr () -> DestroyNotifyPtr -> IO CancellationKey) -> IO (Result, b) -> Operation b
 operationImpl :: ((CInt -> IO a -> IO ()) -> IO (FunPtr b)) -> OperationImpl b a
 operationImpl impl asyncIO = Operation $ \onError onSuccess -> do
 	
-	callback <- impl $ \cres io -> case F.result cres of
-		T.RESULT_OK -> io >>= onSuccess
-		x -> onError $ T.resultToError x
+	callback <- impl $ \cres io -> case result cres of
+		RESULT_OK -> io >>= onSuccess
+		x -> onError $ resultToError x
 	
-	destroy <- F.wrapDestroyNotify $ \ptr -> do
+	destroy <- wrapDestroyNotify $ \ptr -> do
 		let stable = castPtrToStablePtr ptr
 		join $ deRefStablePtr stable
 		freeStablePtr stable
@@ -75,17 +73,17 @@ operationImpl impl asyncIO = Operation $ \onError onSuccess -> do
 
 -- Available basic operation types
 
-voidOperation :: OperationImpl F.DoneCallback ()
+voidOperation :: OperationImpl DoneCallback ()
 voidOperation = operationImpl $ \checkResult ->
-	F.wrapDoneCallback $ \cres _ ->
+	wrapDoneCallback $ \cres _ ->
 	checkResult cres $ return ()
 
-maybeTextOperation :: OperationImpl F.GetStringCallback (Maybe Text)
+maybeTextOperation :: OperationImpl GetStringCallback (Maybe Text)
 maybeTextOperation = operationImpl $ \checkResult ->
-	F.wrapGetStringCallback $ \cres cstr _ ->
-	checkResult cres $ F.peekNullableText cstr
+	wrapGetStringCallback $ \cres cstr _ ->
+	checkResult cres $ peekNullableText cstr
 
-textListOperation :: OperationImpl F.GetListCallback [Text]
+textListOperation :: OperationImpl GetListCallback [Text]
 textListOperation = operationImpl $ \checkResult ->
-	F.wrapGetListCallback $ \cres list _ ->
-	checkResult cres $ F.convertStringList list
+	wrapGetListCallback $ \cres list _ ->
+	checkResult cres $ convertStringList list

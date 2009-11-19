@@ -50,6 +50,11 @@ module Gnome.Keyring.Internal.FFI
 	, stealTextList
 	, convertStringList
 	, mapGList
+	
+	-- * Re-export, since any clients of this module will need Foreign
+	-- and Foreign.C anyway.
+	, module Foreign
+	, module Foreign.C
 	) where
 import Control.Exception (bracket)
 import Data.Text.Lazy (Text)

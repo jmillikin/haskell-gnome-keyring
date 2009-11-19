@@ -27,8 +27,7 @@ module Gnome.Keyring.Internal.KeyringInfo
 	, withKeyringInfo
 	, stealKeyringInfoPtr
 	) where
-import Foreign
-import Foreign.C
+import Gnome.Keyring.Internal.FFI
 import Gnome.Keyring.Internal.Operation
 
 -- Our keyring info populates/is populated by the native info structure.

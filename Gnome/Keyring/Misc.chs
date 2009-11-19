@@ -17,12 +17,12 @@
 #include <gnome-keyring.h>
 {# context prefix = "gnome_keyring_" #}
 
-module Gnome.Keyring.Misc where
-import Gnome.Keyring.Internal.Types (CancellationKey (..))
-
--- Import unqualified for c2hs
-import Foreign
-import Foreign.C
+module Gnome.Keyring.Misc
+	( available
+	, cancel
+	) where
+import Gnome.Keyring.Internal.FFI
+import Gnome.Keyring.Internal.Types
 
 -- | Check whether the client can communicate with a GNOME Keyring server.
 -- 

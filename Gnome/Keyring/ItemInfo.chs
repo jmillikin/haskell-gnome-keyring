@@ -34,8 +34,6 @@ module Gnome.Keyring.ItemInfo
 	) where
 import Data.Text.Lazy (Text)
 import Control.Exception (bracket)
-import Foreign
-import Foreign.C
 import Gnome.Keyring.Internal.FFI
 import Gnome.Keyring.Internal.Operation
 
