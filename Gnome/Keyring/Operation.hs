@@ -13,6 +13,15 @@
 -- You should have received a copy of the GNU General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 -- 
+-- |
+-- Maintainer  : John Millikin <jmillikin@gmail.com>
+-- Stability   : experimental
+-- Portability : non-portable (FFI)
+-- 
+-- Most operations on the keyring and its items have both synchronous
+-- and asynchronous variants. The 'Operation' type allows these to be
+-- combined in a single value, to reduce the overall size of the API.
+-- 
 module Gnome.Keyring.Operation
 	( Operation
 	, CancellationKey
