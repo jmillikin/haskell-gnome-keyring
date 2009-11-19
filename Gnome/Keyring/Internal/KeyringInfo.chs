@@ -41,6 +41,20 @@ data KeyringInfo = KeyringInfo
 	, keyringInfoPtr     :: ForeignPtr ()
 	}
 
+-- The extra pointer shouldn't be printed out when showing a KeyringInfo,
+-- so deriving(Show) can't be used. This instance acts like the
+-- auto-generated instance, minus the pointer.
+instance Show KeyringInfo where
+	showsPrec d info = showParen (d > 10) $
+		s "KeyringInfo" .
+		s " {keyringLockOnIdle = " . shows (keyringLockOnIdle info) .
+		s ", keyringLockTimeout = " . shows (keyringLockTimeout info) .
+		s ", keyringMTime = " . shows (keyringMTime info) .
+		s ", keyringCTime = " . shows (keyringCTime info) .
+		s ", keyringIsLocked = " . shows (keyringIsLocked info) .
+		s "}"
+		where s = showString
+
 -- | Set whether or not to lock a keyring after a certain amount of idle
 -- time.
 -- 
