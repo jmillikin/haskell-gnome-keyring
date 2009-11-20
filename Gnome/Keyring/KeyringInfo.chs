@@ -17,10 +17,9 @@
 #include <gnome-keyring.h>
 {# context prefix = "gnome_keyring_info_" #}
 
-module Gnome.Keyring.Internal.KeyringInfo
+module Gnome.Keyring.KeyringInfo
 	( KeyringInfo (..)
-	, keyringSetLockOnIdle
-	, keyringSetLockTimeout
+	, KeyringInfoToken
 	
 	, GetKeyringInfoCallbackPtr
 	, keyringInfoOperation
@@ -32,13 +31,15 @@ import Gnome.Keyring.Internal.Operation
 
 -- Our keyring info populates/is populated by the native info structure.
 -- Clients can't create them directly, because GKR doesn't allow it.
+newtype KeyringInfoToken = KeyringInfoToken (ForeignPtr ())
+
 data KeyringInfo = KeyringInfo
 	{ keyringLockOnIdle  :: Bool
 	, keyringLockTimeout :: Word32
 	, keyringMTime       :: Integer -- TODO: TimeOfDay
 	, keyringCTime       :: Integer -- TODO: TimeOfDay
 	, keyringIsLocked    :: Bool
-	, keyringInfoPtr     :: ForeignPtr ()
+	, keyringInfoToken   :: KeyringInfoToken
 	}
 
 -- The extra pointer shouldn't be printed out when showing a KeyringInfo,
@@ -54,17 +55,6 @@ instance Show KeyringInfo where
 		s ", keyringIsLocked = " . shows (keyringIsLocked info) .
 		s "}"
 		where s = showString
-
--- | Set whether or not to lock a keyring after a certain amount of idle
--- time.
--- 
-keyringSetLockOnIdle  :: KeyringInfo -> Bool -> KeyringInfo
-keyringSetLockOnIdle info x = info {keyringLockOnIdle = x}
-
--- | Set the idle timeout, in seconds, after which to lock the keyring.
--- 
-keyringSetLockTimeout :: KeyringInfo -> Word32 -> KeyringInfo
-keyringSetLockTimeout info x = info {keyringLockTimeout = x}
 
 -- GnomeKeyringOperationGetKeyringInfoCallback
 type GetKeyringInfoCallback = CInt -> Ptr () -> Ptr () -> IO ()
@@ -90,7 +80,8 @@ peekKeyringInfo ptr = do
 	ctime <- toInteger `fmap` {# call unsafe get_ctime #} ptr
 	isLocked <- toBool `fmap` {# call unsafe get_is_locked #} ptr
 	copy <- copyInfo ptr
-	return $ KeyringInfo lockOnIdle timeout mtime ctime isLocked copy
+	let token = KeyringInfoToken copy
+	return $ KeyringInfo lockOnIdle timeout mtime ctime isLocked token
 
 stealKeyringInfoPtr :: Ptr (Ptr ()) -> IO KeyringInfo
 stealKeyringInfoPtr ptr = do
@@ -99,7 +90,8 @@ stealKeyringInfoPtr ptr = do
 
 withKeyringInfo :: KeyringInfo -> (Ptr () -> IO a) -> IO a
 withKeyringInfo info io = do
-	copy <- withForeignPtr (keyringInfoPtr info) copyInfo
+	let (KeyringInfoToken infoPtr) = keyringInfoToken info
+	copy <- withForeignPtr infoPtr copyInfo
 	withForeignPtr copy $ \ptr -> do
 	{# call unsafe set_lock_on_idle #} ptr . fromBool . keyringLockOnIdle $ info
 	{# call unsafe set_lock_timeout #} ptr . fromIntegral . keyringLockTimeout $ info

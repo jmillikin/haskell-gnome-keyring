@@ -34,26 +34,34 @@
 
 module Gnome.Keyring.Keyring
 	( KeyringName
+	
+	-- * Basic operations
 	, getDefaultKeyring
 	, setDefaultKeyring
 	, listKeyringNames
 	, create
 	, delete
+	, changePassword
+	, listItemIDs
+	
+	-- * Locking and unlocking
 	, lock
 	, lockAll
 	, unlock
+	
+	-- * Keyring information
+	, KeyringInfo (..)
+	, KeyringInfoToken
 	, getInfo
 	, setInfo
-	, changePassword
-	, listItemIDs
 	) where
 
 import Control.Exception (bracket)
 import Data.Text.Lazy (Text)
 import Gnome.Keyring.Item (findItems) -- for docs
 import Gnome.Keyring.ItemInfo
+import Gnome.Keyring.KeyringInfo
 import Gnome.Keyring.Internal.FFI
-import Gnome.Keyring.Internal.KeyringInfo
 import Gnome.Keyring.Internal.Operation
 import Gnome.Keyring.Internal.Types
 

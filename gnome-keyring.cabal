@@ -39,16 +39,15 @@ library
     Gnome.Keyring
     Gnome.Keyring.Item
     Gnome.Keyring.Keyring
-    Gnome.Keyring.KeyringInfo
     Gnome.Keyring.NetworkPassword
     Gnome.Keyring.Operation
 
   other-modules:
     Gnome.Keyring.Internal.FFI
-    Gnome.Keyring.Internal.KeyringInfo
     Gnome.Keyring.Internal.Operation
     Gnome.Keyring.Internal.Types
     Gnome.Keyring.ItemInfo
+    Gnome.Keyring.KeyringInfo
     Gnome.Keyring.Misc
 
   extra-libraries: gnome-keyring
