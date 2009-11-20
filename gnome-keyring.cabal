@@ -15,7 +15,7 @@ description:
   binding to the libgnome-keyring C library.
   .
   API documentation is available at
-  <https://dl.dropbox.com/u/1947532/gnome-keyring_0.1/index.html>.
+  <https://dl.dropbox.com/u/1947532/gnome-keyring_0.2/index.html>.
   .
   Documentation for the original library is available at
   <http://library.gnome.org/devel/gnome-keyring/stable/>.
