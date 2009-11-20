@@ -29,13 +29,11 @@ module Gnome.Keyring
 	( available
 	, module Gnome.Keyring.Item
 	, module Gnome.Keyring.Keyring
-	, module Gnome.Keyring.KeyringInfo
 	, module Gnome.Keyring.NetworkPassword
 	, module Gnome.Keyring.Operation
 	) where
 import Gnome.Keyring.Item
 import Gnome.Keyring.Keyring
-import Gnome.Keyring.KeyringInfo
 import Gnome.Keyring.NetworkPassword
 import Gnome.Keyring.Operation
 import Gnome.Keyring.Misc
