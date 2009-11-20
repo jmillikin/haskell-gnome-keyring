@@ -31,6 +31,7 @@ library
     , text
     , bytestring
     , containers
+    , time
 
   build-tools:
     c2hs >= 0.16

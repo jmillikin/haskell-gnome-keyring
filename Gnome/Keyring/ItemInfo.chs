@@ -33,6 +33,7 @@ module Gnome.Keyring.ItemInfo
 	, peekItemID
 	) where
 import Data.Text.Lazy (Text)
+import Data.Time (UTCTime)
 import Control.Exception (bracket)
 import Gnome.Keyring.Internal.FFI
 import Gnome.Keyring.Internal.Operation
@@ -77,8 +78,8 @@ data ItemInfo = ItemInfo
 	{ itemType        :: ItemType
 	, itemSecret      :: Maybe Text
 	, itemDisplayName :: Maybe Text
-	, itemMTime       :: Integer -- TODO: TimeOfDay
-	, itemCTime       :: Integer -- TODO: TimeOfDay
+	, itemMTime       :: UTCTime
+	, itemCTime       :: UTCTime
 	}
 	deriving (Show, Eq)
 
@@ -87,8 +88,8 @@ peekItemInfo info = do
 	cType <- {# call unsafe item_info_get_type #} info
 	secret <- stealNullableText =<< {# call unsafe item_info_get_secret #} info
 	name <- stealNullableText =<< {# call unsafe item_info_get_display_name #} info
-	mtime <- toInteger `fmap` {# call unsafe item_info_get_mtime #} info
-	ctime <- toInteger `fmap` {# call unsafe item_info_get_ctime #} info
+	mtime <- cToUTC `fmap` {# call unsafe item_info_get_mtime #} info
+	ctime <- cToUTC `fmap` {# call unsafe item_info_get_ctime #} info
 	let type' = toItemType . toEnum . fromIntegral $ cType
 	return $ ItemInfo type' secret name mtime ctime
 

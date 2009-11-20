@@ -26,6 +26,7 @@ module Gnome.Keyring.KeyringInfo
 	, withKeyringInfo
 	, stealKeyringInfoPtr
 	) where
+import Data.Time (UTCTime)
 import Gnome.Keyring.Internal.FFI
 import Gnome.Keyring.Internal.Operation
 
@@ -36,8 +37,8 @@ newtype KeyringInfoToken = KeyringInfoToken (ForeignPtr ())
 data KeyringInfo = KeyringInfo
 	{ keyringLockOnIdle  :: Bool
 	, keyringLockTimeout :: Word32
-	, keyringMTime       :: Integer -- TODO: TimeOfDay
-	, keyringCTime       :: Integer -- TODO: TimeOfDay
+	, keyringMTime       :: UTCTime
+	, keyringCTime       :: UTCTime
 	, keyringIsLocked    :: Bool
 	, keyringInfoToken   :: KeyringInfoToken
 	}
@@ -76,8 +77,8 @@ peekKeyringInfo :: Ptr () -> IO KeyringInfo
 peekKeyringInfo ptr = do
 	lockOnIdle <- toBool `fmap` {# call unsafe get_lock_on_idle #} ptr
 	timeout <- fromIntegral `fmap` {# call unsafe get_lock_timeout #} ptr
-	mtime <- toInteger `fmap` {# call unsafe get_mtime #} ptr
-	ctime <- toInteger `fmap` {# call unsafe get_ctime #} ptr
+	mtime <- cToUTC `fmap` {# call unsafe get_mtime #} ptr
+	ctime <- cToUTC `fmap` {# call unsafe get_ctime #} ptr
 	isLocked <- toBool `fmap` {# call unsafe get_is_locked #} ptr
 	copy <- copyInfo ptr
 	let token = KeyringInfoToken copy

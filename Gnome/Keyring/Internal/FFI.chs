@@ -39,6 +39,7 @@ module Gnome.Keyring.Internal.FFI
 	, wrapGetListCallback
 	
 	-- * Marshaling helpers
+	, cToUTC
 	, withText
 	, peekText
 	, withNullableText
@@ -54,6 +55,8 @@ module Gnome.Keyring.Internal.FFI
 	) where
 import Control.Exception (bracket)
 import Data.Text.Lazy (Text)
+import Data.Time (UTCTime)
+import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import qualified Data.Text.Lazy as Text
 import Data.Text.Lazy.Encoding (encodeUtf8, decodeUtf8)
 import qualified Data.ByteString as BS
@@ -62,6 +65,9 @@ import qualified Data.ByteString.Lazy as BSL
 -- Import unqualified for c2hs
 import Foreign
 import Foreign.C
+
+cToUTC :: Integral a => a -> UTCTime
+cToUTC = posixSecondsToUTCTime . fromIntegral
 
 withText :: Text -> (CString -> IO a) -> IO a
 withText = BS.useAsCString . BS.concat . BSL.toChunks . encodeUtf8
