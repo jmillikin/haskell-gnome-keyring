@@ -85,11 +85,11 @@ data ItemInfo = ItemInfo
 
 peekItemInfo :: Ptr () -> IO ItemInfo
 peekItemInfo info = do
-	cType <- {# call unsafe item_info_get_type #} info
-	secret <- stealNullableText =<< {# call unsafe item_info_get_secret #} info
-	name <- stealNullableText =<< {# call unsafe item_info_get_display_name #} info
-	mtime <- cToUTC `fmap` {# call unsafe item_info_get_mtime #} info
-	ctime <- cToUTC `fmap` {# call unsafe item_info_get_ctime #} info
+	cType <- {# call item_info_get_type #} info
+	secret <- stealNullableText =<< {# call item_info_get_secret #} info
+	name <- stealNullableText =<< {# call item_info_get_display_name #} info
+	mtime <- cToUTC `fmap` {# call item_info_get_mtime #} info
+	ctime <- cToUTC `fmap` {# call item_info_get_ctime #} info
 	let type' = toItemType . toEnum . fromIntegral $ cType
 	return $ ItemInfo type' secret name mtime ctime
 
@@ -97,18 +97,18 @@ stealItemInfo :: Ptr (Ptr ()) -> IO ItemInfo
 stealItemInfo ptr = bracket (peek ptr) freeItemInfo peekItemInfo
 
 freeItemInfo :: Ptr () -> IO ()
-freeItemInfo = {# call unsafe item_info_free #}
+freeItemInfo = {# call item_info_free #}
 
 foreign import ccall "gnome-keyring.h &gnome_keyring_item_info_free"
 	finalizeItemInfo :: FunPtr (Ptr a -> IO ())
 
 withItemInfo :: ItemInfo -> (Ptr () -> IO a) -> IO a
 withItemInfo info io = do
-	fptr <- newForeignPtr finalizeItemInfo =<< {# call unsafe item_info_new #}
+	fptr <- newForeignPtr finalizeItemInfo =<< {# call item_info_new #}
 	withForeignPtr fptr $ \ptr -> do
-	{# call unsafe item_info_set_type #} ptr . fromItemType . itemType $ info
-	withNullableText (itemSecret info) $ {# call unsafe item_info_set_secret #} ptr
-	withNullableText (itemDisplayName info) $ {# call unsafe item_info_set_display_name #} ptr
+	{# call item_info_set_type #} ptr . fromItemType . itemType $ info
+	withNullableText (itemSecret info) $ {# call item_info_set_secret #} ptr
+	withNullableText (itemDisplayName info) $ {# call item_info_set_display_name #} ptr
 	io ptr
 
 itemIDListOperation :: OperationImpl GetListCallback [ItemID]
@@ -121,7 +121,7 @@ peekItemIDList = mapGList $ return . ItemID . fromIntegral . ptrToWordPtr
 
 stealItemIDList :: Ptr (Ptr ()) -> IO [ItemID]
 stealItemIDList ptr = bracket (peek ptr) freeList peekItemIDList where
-	freeList = {# call unsafe g_list_free #}
+	freeList = {# call g_list_free #}
 
 type GetItemInfoCallback = CInt -> Ptr () -> Ptr () -> IO ()
 {# pointer GnomeKeyringOperationGetItemInfoCallback as GetItemInfoCallbackPtr #}

@@ -71,15 +71,15 @@ keyringInfoOperation = operationImpl $ \checkResult ->
 	checkResult cres $ peekKeyringInfo ptr
 
 copyInfo :: Ptr () -> IO (ForeignPtr ())
-copyInfo = (newForeignPtr finalizeKeyringInfo =<<) . {# call unsafe copy as c_copy #}
+copyInfo = (newForeignPtr finalizeKeyringInfo =<<) . {# call copy as c_copy #}
 
 peekKeyringInfo :: Ptr () -> IO KeyringInfo
 peekKeyringInfo ptr = do
-	lockOnIdle <- toBool `fmap` {# call unsafe get_lock_on_idle #} ptr
-	timeout <- fromIntegral `fmap` {# call unsafe get_lock_timeout #} ptr
-	mtime <- cToUTC `fmap` {# call unsafe get_mtime #} ptr
-	ctime <- cToUTC `fmap` {# call unsafe get_ctime #} ptr
-	isLocked <- toBool `fmap` {# call unsafe get_is_locked #} ptr
+	lockOnIdle <- toBool `fmap` {# call get_lock_on_idle #} ptr
+	timeout <- fromIntegral `fmap` {# call get_lock_timeout #} ptr
+	mtime <- cToUTC `fmap` {# call get_mtime #} ptr
+	ctime <- cToUTC `fmap` {# call get_ctime #} ptr
+	isLocked <- toBool `fmap` {# call get_is_locked #} ptr
 	copy <- copyInfo ptr
 	let token = KeyringInfoToken copy
 	return $ KeyringInfo lockOnIdle timeout mtime ctime isLocked token
@@ -94,8 +94,8 @@ withKeyringInfo info io = do
 	let (KeyringInfoToken infoPtr) = keyringInfoToken info
 	copy <- withForeignPtr infoPtr copyInfo
 	withForeignPtr copy $ \ptr -> do
-	{# call unsafe set_lock_on_idle #} ptr . fromBool . keyringLockOnIdle $ info
-	{# call unsafe set_lock_timeout #} ptr . fromIntegral . keyringLockTimeout $ info
+	{# call set_lock_on_idle #} ptr . fromBool . keyringLockOnIdle $ info
+	{# call set_lock_timeout #} ptr . fromIntegral . keyringLockTimeout $ info
 	io ptr
 
 foreign import ccall "gnome-keyring.h &gnome_keyring_info_free"

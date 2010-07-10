@@ -79,7 +79,7 @@ getDefaultKeyring = maybeTextOperation
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
-{# fun unsafe get_default_keyring_sync
+{# fun get_default_keyring_sync
 	{ alloca- `Maybe Text' stealNullableTextPtr*
 	} -> `Result' result #}
 
@@ -100,7 +100,7 @@ setDefaultKeyring k = voidOperation
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
-{# fun unsafe set_default_keyring_sync
+{# fun set_default_keyring_sync
 	{ withText* `Text'
 	} -> `(Result, ())' resultAndTuple #}
 
@@ -118,13 +118,13 @@ listKeyringNames = textListOperation
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
-{# fun unsafe list_keyring_names_sync
+{# fun list_keyring_names_sync
 	{ alloca- `[Text]' stealTextList*
 	} -> `Result' result #}
 
 stealTextList :: Ptr (Ptr ()) -> IO [Text]
 stealTextList ptr = bracket (peek ptr)
-	{# call unsafe gnome_keyring_string_list_free #}
+	{# call gnome_keyring_string_list_free #}
 	(mapGList peekText)
 
 -- | Create a new keyring with the specified name. In most cases, 'Nothing'
@@ -142,7 +142,7 @@ create k p = voidOperation (c_create k p) (create_sync k p)
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
-{# fun unsafe create_sync
+{# fun create_sync
 	{ withText* `Text'
 	, withNullableText* `Maybe Text'
 	} -> `(Result, ())' resultAndTuple #}
@@ -160,7 +160,7 @@ delete k = voidOperation (c_delete k) (delete_sync k)
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
-{# fun unsafe delete_sync
+{# fun delete_sync
 	{ withText* `Text'
 	} -> `(Result, ())' resultAndTuple #}
 
@@ -180,7 +180,7 @@ lock k = voidOperation (c_lock k) (lock_sync k)
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
-{# fun unsafe lock_sync
+{# fun lock_sync
 	{ withNullableText* `Maybe Text'
 	} -> `(Result, ())' resultAndTuple #}
 
@@ -196,7 +196,7 @@ lockAll = voidOperation lock_all lock_all_sync
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
-{# fun unsafe lock_all_sync
+{# fun lock_all_sync
 	{} -> `(Result, ())' resultAndTuple #}
 
 -- | Unlock a keyring, so that its contents may be accessed. In most cases,
@@ -217,7 +217,7 @@ unlock k p = voidOperation (c_unlock k p) (unlock_sync k p)
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
-{# fun unsafe unlock_sync
+{# fun unlock_sync
 	{ withNullableText* `Maybe Text'
 	, withNullableText* `Maybe Text'
 	} -> `(Result, ())' resultAndTuple #}
@@ -234,7 +234,7 @@ getInfo k = keyringInfoOperation (get_info k) (get_info_sync k)
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
-{# fun unsafe get_info_sync
+{# fun get_info_sync
 	{ withNullableText* `Maybe Text'
 	, alloca- `KeyringInfo' stealKeyringInfoPtr*
 	} -> `Result' result #}
@@ -256,7 +256,7 @@ setInfo k info = voidOperation
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
-{# fun unsafe set_info_sync
+{# fun set_info_sync
 	{ withNullableText* `Maybe Text'
 	, withKeyringInfo* `KeyringInfo'
 	} -> `(Result, ())' resultAndTuple #}
@@ -282,7 +282,7 @@ changePassword k op np = voidOperation
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
-{# fun unsafe change_password_sync
+{# fun change_password_sync
 	{ withText* `Text'
 	, withNullableText* `Maybe Text'
 	, withNullableText* `Maybe Text'
@@ -303,7 +303,7 @@ listItemIDs name = itemIDListOperation
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
-{# fun unsafe list_item_ids_sync
+{# fun list_item_ids_sync
 	{ withNullableText* `Maybe Text'
 	, alloca- `[ItemID]' stealItemIDList*
 	} -> `Result' result #}

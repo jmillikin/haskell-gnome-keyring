@@ -26,7 +26,7 @@ import Gnome.Keyring.Internal.Types
 
 -- | Check whether the client can communicate with a GNOME Keyring server.
 -- 
-{# fun unsafe is_available as available
+{# fun is_available as available
 	{} -> `Bool' toBool #}
 
 unpackKey :: CancellationKey -> Ptr ()

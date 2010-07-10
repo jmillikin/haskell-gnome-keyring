@@ -134,7 +134,7 @@ itemCreate k t dn as s u = itemIDOperation
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
-{# fun unsafe item_create_sync
+{# fun item_create_sync
 	{ withNullableText* `Maybe Text'
 	, fromItemType `ItemType'
 	, withText* `Text'
@@ -162,7 +162,7 @@ itemDelete k item = voidOperation
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
-{# fun unsafe item_delete_sync
+{# fun item_delete_sync
 	{ withNullableText* `Maybe Text'
 	, cItemID `ItemID'
 	} -> `(Result, ())' resultAndTuple #}
@@ -185,7 +185,7 @@ itemGetInfo k item = itemInfoOperation
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
-{# fun unsafe item_get_info_sync
+{# fun item_get_info_sync
 	{ withNullableText* `Maybe Text'
 	, cItemID `ItemID'
 	, alloca- `ItemInfo' stealItemInfo*
@@ -212,7 +212,7 @@ itemGetInfoFull k item flags = itemInfoOperation
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
-{# fun unsafe item_get_info_full_sync
+{# fun item_get_info_full_sync
 	{ withNullableText* `Maybe Text'
 	, cItemID `ItemID'
 	, cItemInfoFlags `Set ItemInfoFlag'
@@ -238,7 +238,7 @@ itemSetInfo k item info = voidOperation
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
-{# fun unsafe item_set_info_sync
+{# fun item_set_info_sync
 	{ withNullableText* `Maybe Text'
 	, cItemID `ItemID'
 	, withItemInfo* `ItemInfo'
@@ -265,18 +265,18 @@ attributeName (WordAttribute n _) = n
 
 withAttributeList :: [Attribute] -> (Ptr () -> IO a) -> IO a
 withAttributeList attrs io = bracket newList freeAttributeList buildList where
-	newList = {# call unsafe g_array_new #} 0 0 {# sizeof GnomeKeyringAttribute #}
+	newList = {# call g_array_new #} 0 0 {# sizeof GnomeKeyringAttribute #}
 	buildList list = mapM_ (append list) attrs >> io list
 	append list (TextAttribute n x) = appendString list n x
 	append list (WordAttribute n x) = appendUInt32 list n x
 
-{# fun unsafe attribute_list_append_string as appendString
+{# fun attribute_list_append_string as appendString
 	{ id `Ptr ()'
 	, withText* `Text'
 	, withText* `Text'
 	} -> `()' id #}
 
-{# fun unsafe attribute_list_append_uint32 as appendUInt32
+{# fun attribute_list_append_uint32 as appendUInt32
 	{ id `Ptr ()'
 	, withText* `Text'
 	, fromIntegral `Word32'
@@ -301,7 +301,7 @@ stealAttributeList :: Ptr (Ptr ()) -> IO [Attribute]
 stealAttributeList ptr = bracket (peek ptr) freeAttributeList peekAttributeList
 
 freeAttributeList :: Ptr () -> IO ()
-freeAttributeList = {# call unsafe attribute_list_free #}
+freeAttributeList = {# call attribute_list_free #}
 
 type GetAttributesCallback = CInt -> Ptr () -> Ptr () -> IO ()
 {# pointer GnomeKeyringOperationGetAttributesCallback as GetAttributesCallbackPtr #}
@@ -328,7 +328,7 @@ itemGetAttributes k item = attributeListOperation
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
-{# fun unsafe item_get_attributes_sync
+{# fun item_get_attributes_sync
 	{ withNullableText* `Maybe Text'
 	, cItemID `ItemID'
 	, alloca- `[Attribute]' stealAttributeList*
@@ -351,7 +351,7 @@ itemSetAttributes k item as = voidOperation
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
-{# fun unsafe item_set_attributes_sync
+{# fun item_set_attributes_sync
 	{ withNullableText* `Maybe Text'
 	, cItemID `ItemID'
 	, withAttributeList* `[Attribute]'
@@ -380,9 +380,9 @@ data AccessControl = AccessControl
 
 peekAccessControl :: Ptr () -> IO AccessControl
 peekAccessControl ac = do
-	name <- stealNullableText =<< {# call unsafe item_ac_get_display_name #} ac
-	path <- stealNullableText =<< {# call unsafe item_ac_get_path_name #} ac
-	cType <- {# call unsafe item_ac_get_access_type #} ac
+	name <- stealNullableText =<< {# call item_ac_get_display_name #} ac
+	path <- stealNullableText =<< {# call item_ac_get_path_name #} ac
+	cType <- {# call item_ac_get_access_type #} ac
 	return $ AccessControl name path $ peekAccessType cType
 
 stealACL :: Ptr (Ptr ()) -> IO [AccessControl]
@@ -393,26 +393,26 @@ withACL acl = bracket (buildACL acl) freeACL
 
 buildACL :: [AccessControl] -> IO (Ptr ())
 buildACL acs = bracket
-	{# call unsafe application_ref_new #}
-	{# call unsafe application_ref_free #} $ \appRef ->
+	{# call application_ref_new #}
+	{# call application_ref_free #} $ \appRef ->
 	buildACL' appRef acs nullPtr
 
 buildACL' :: Ptr () -> [AccessControl] -> Ptr () -> IO (Ptr ())
 buildACL'      _       [] list = return list
 buildACL' appRef (ac:acs) list = buildAC appRef ac
-	>>= {# call unsafe g_list_append #} list
+	>>= {# call g_list_append #} list
 	>>= buildACL' appRef acs
 
 buildAC :: Ptr () -> AccessControl -> IO (Ptr ())
 buildAC appRef ac = do
 	let cAllowed = cAccessTypes $ accessControlType ac
-	ptr <- {# call unsafe access_control_new #} appRef cAllowed
-	withNullableText (accessControlName ac) $ {# call unsafe item_ac_set_display_name #} ptr
-	withNullableText (accessControlPath ac) $ {# call unsafe item_ac_set_path_name #} ptr
+	ptr <- {# call access_control_new #} appRef cAllowed
+	withNullableText (accessControlName ac) $ {# call item_ac_set_display_name #} ptr
+	withNullableText (accessControlPath ac) $ {# call item_ac_set_path_name #} ptr
 	return ptr
 
 freeACL :: Ptr () -> IO ()
-freeACL = {# call unsafe acl_free #}
+freeACL = {# call acl_free #}
 
 cAccessTypes :: Bits a => Set AccessType -> a
 cAccessTypes = foldr (.|.) 0 . map (fromIntegral . fromEnum . fromAccessType) . toList where
@@ -450,7 +450,7 @@ itemGetACL k item = accessControlListOperation
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
-{# fun unsafe item_get_acl_sync
+{# fun item_get_acl_sync
 	{ withNullableText* `Maybe Text'
 	, cItemID `ItemID'
 	, alloca- `[AccessControl]' stealACL*
@@ -473,7 +473,7 @@ itemSetACL k item acl = voidOperation
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
-{# fun unsafe item_set_acl_sync
+{# fun item_set_acl_sync
 	{ withNullableText* `Maybe Text'
 	, cItemID `ItemID'
 	, withACL* `[AccessControl]'
@@ -506,7 +506,7 @@ itemGrantAccessRights k d p item r = voidOperation
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
-{# fun unsafe item_grant_access_rights_sync
+{# fun item_grant_access_rights_sync
 	{ withNullableText* `Maybe Text'
 	, withText* `Text'
 	, withText* `Text'
@@ -533,7 +533,7 @@ peekFound f = do
 
 stealFoundList :: Ptr (Ptr ()) -> IO [FoundItem]
 stealFoundList ptr = bracket (peek ptr)
-	{# call unsafe found_list_free #}
+	{# call found_list_free #}
 	(mapGList peekFound)
 
 foundItemsOperation :: OperationImpl GetListCallback [FoundItem]
@@ -560,7 +560,7 @@ findItems t as = foundItemsOperation
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
-{# fun unsafe find_items_sync
+{# fun find_items_sync
 	{ fromItemType `ItemType'
 	, withAttributeList* `[Attribute]'
 	, alloca- `[FoundItem]' stealFoundList*

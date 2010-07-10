@@ -90,7 +90,7 @@ findNetworkPassword loc = let
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
-{# fun unsafe find_network_password_sync
+{# fun find_network_password_sync
 	{ withNullableText* `Maybe Text'
 	, withNullableText* `Maybe Text'
 	, withNullableText* `Maybe Text'
@@ -140,7 +140,7 @@ setNetworkPassword k loc secret = let
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
-{# fun unsafe set_network_password_sync
+{# fun set_network_password_sync
 	{ withNullableText* `Maybe Text'
 	, withNullableText* `Maybe Text'
 	, withNullableText* `Maybe Text'
@@ -181,7 +181,7 @@ peekPassword pwd = do
 
 stealPasswordList :: Ptr (Ptr ()) -> IO [NetworkPassword]
 stealPasswordList ptr = bracket (peek ptr)
-	{# call unsafe network_password_list_free #}
+	{# call network_password_list_free #}
 	(mapGList peekPassword)
 
 passwordListOperation :: OperationImpl GetListCallback [NetworkPassword]
