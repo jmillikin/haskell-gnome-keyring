@@ -57,7 +57,6 @@ import Control.Exception (bracket)
 import Data.Text.Lazy (Text)
 import Data.Time (UTCTime)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
-import qualified Data.Text.Lazy as Text
 import Data.Text.Lazy.Encoding (encodeUtf8, decodeUtf8)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL

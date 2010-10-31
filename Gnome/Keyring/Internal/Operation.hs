@@ -62,7 +62,7 @@ operationImpl impl asyncIO = Operation $ \onError onSuccess -> do
 	
 	destroy <- wrapDestroyNotify $ \ptr -> do
 		let stable = castPtrToStablePtr ptr
-		join $ deRefStablePtr stable
+		void . join $ deRefStablePtr stable
 		freeStablePtr stable
 	
 	stable <- newStablePtr $ do
