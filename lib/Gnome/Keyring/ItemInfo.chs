@@ -1,22 +1,19 @@
--- Copyright (C) 2009 John Millikin <jmillikin@gmail.com>
--- 
+{-# LANGUAGE ForeignFunctionInterface #-}
+
+-- Copyright (C) 2009-2011 John Millikin <jmillikin@gmail.com>
+--
 -- This program is free software: you can redistribute it and/or modify
 -- it under the terms of the GNU General Public License as published by
 -- the Free Software Foundation, either version 3 of the License, or
 -- any later version.
--- 
+--
 -- This program is distributed in the hope that it will be useful,
 -- but WITHOUT ANY WARRANTY; without even the implied warranty of
 -- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 -- GNU General Public License for more details.
--- 
+--
 -- You should have received a copy of the GNU General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
--- 
-{-# LANGUAGE ForeignFunctionInterface #-}
-#include <gnome-keyring.h>
-{# context prefix = "gnome_keyring_" #}
-
 module Gnome.Keyring.ItemInfo
 	( ItemInfo (..)
 	, ItemType (..)
@@ -32,11 +29,16 @@ module Gnome.Keyring.ItemInfo
 	, stealItemInfo
 	, peekItemID
 	) where
-import Data.Text.Lazy (Text)
-import Data.Time (UTCTime)
-import Control.Exception (bracket)
-import Gnome.Keyring.Internal.FFI
-import Gnome.Keyring.Internal.Operation
+
+import           Control.Exception (bracket)
+import           Data.Text.Lazy (Text)
+import           Data.Time (UTCTime)
+
+import           Gnome.Keyring.Internal.FFI
+import           Gnome.Keyring.Internal.Operation
+
+#include <gnome-keyring.h>
+{# context prefix = "gnome_keyring_" #}
 
 newtype ItemID = ItemID Word32
 	deriving (Show, Eq, Ord)

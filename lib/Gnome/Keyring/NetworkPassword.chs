@@ -1,42 +1,44 @@
--- Copyright (C) 2009 John Millikin <jmillikin@gmail.com>
--- 
+{-# LANGUAGE ForeignFunctionInterface #-}
+
+-- Copyright (C) 2009-2011 John Millikin <jmillikin@gmail.com>
+--
 -- This program is free software: you can redistribute it and/or modify
 -- it under the terms of the GNU General Public License as published by
 -- the Free Software Foundation, either version 3 of the License, or
 -- any later version.
--- 
+--
 -- This program is distributed in the hope that it will be useful,
 -- but WITHOUT ANY WARRANTY; without even the implied warranty of
 -- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 -- GNU General Public License for more details.
--- 
+--
 -- You should have received a copy of the GNU General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
--- 
+
 -- |
 -- Maintainer  : John Millikin <jmillikin@gmail.com>
 -- Stability   : experimental
 -- Portability : non-portable (FFI)
--- 
+--
 -- Networks passwords are a simple way of saving passwords associated with
 -- a certain user, server, protocol, and other fields.
-
-{-# LANGUAGE ForeignFunctionInterface #-}
-#include <gnome-keyring.h>
-{# context prefix = "gnome_keyring_" #}
-
 module Gnome.Keyring.NetworkPassword
 	( NetworkPassword (..)
 	, NetworkPasswordLocation (..)
 	, findNetworkPassword
 	, setNetworkPassword
 	) where
-import Control.Exception (bracket)
-import Data.Text.Lazy (Text)
-import Gnome.Keyring.ItemInfo
-import Gnome.Keyring.Internal.FFI
-import Gnome.Keyring.Internal.Operation
-import Gnome.Keyring.Internal.Types
+
+import           Control.Exception (bracket)
+import           Data.Text.Lazy (Text)
+
+import           Gnome.Keyring.ItemInfo
+import           Gnome.Keyring.Internal.FFI
+import           Gnome.Keyring.Internal.Operation
+import           Gnome.Keyring.Internal.Types
+
+#include <gnome-keyring.h>
+{# context prefix = "gnome_keyring_" #}
 
 data NetworkPassword = NetworkPassword
 	{ networkPasswordKeyring  :: KeyringName
@@ -58,12 +60,11 @@ data NetworkPasswordLocation = NetworkPasswordLocation
 	deriving (Show, Eq)
 
 -- | Find a previously stored 'NetworkPassword'. Searches all keyrings.
--- 
+--
 -- The user may be prompted to unlock necessary keyrings, and will be
 -- prompted for access to the items if needed.
--- 
+--
 -- Network passwords are items with the 'ItemType' 'ItemNetworkPassword'.
--- 
 findNetworkPassword :: NetworkPasswordLocation -> Operation [NetworkPassword]
 findNetworkPassword loc = let
 	p1 = locationUser     loc
@@ -102,14 +103,13 @@ findNetworkPassword loc = let
 	} -> `Result' result #}
 
 -- | Store a network password.
--- 
+--
 -- If an item already exists for with this network info (ie: user, server,
 -- etc.) then it will be updated.
--- 
+--
 -- Whether a new item is created or not, the item's ID will be returned.
--- 
+--
 -- Network passwords are items with the 'ItemType' 'ItemNetworkPassword'.
--- 
 setNetworkPassword :: Maybe KeyringName -> NetworkPasswordLocation ->
                       Text ->
                       Operation ItemID

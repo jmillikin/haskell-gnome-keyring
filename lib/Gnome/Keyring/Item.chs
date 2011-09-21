@@ -1,32 +1,34 @@
--- Copyright (C) 2009 John Millikin <jmillikin@gmail.com>
--- 
+{-# LANGUAGE ForeignFunctionInterface #-}
+
+-- Copyright (C) 2009-2011 John Millikin <jmillikin@gmail.com>
+--
 -- This program is free software: you can redistribute it and/or modify
 -- it under the terms of the GNU General Public License as published by
 -- the Free Software Foundation, either version 3 of the License, or
 -- any later version.
--- 
+--
 -- This program is distributed in the hope that it will be useful,
 -- but WITHOUT ANY WARRANTY; without even the implied warranty of
 -- MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 -- GNU General Public License for more details.
--- 
+--
 -- You should have received a copy of the GNU General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
--- 
+
 -- |
 -- Maintainer  : John Millikin <jmillikin@gmail.com>
 -- Stability   : experimental
 -- Portability : non-portable (FFI)
--- 
+--
 -- A keyring contains multiple items. Each item has a secret, attributes and
 -- access information associated with it.
--- 
+--
 -- An item is identified by an 'ItemID' unique to the keyring in which it
 -- exists. An item's name is for displaying to the user. Each item has a
 -- single secret, which is Unicode text. This secret is stored in
 -- non-pageable memory in the server, and encrypted on disk. All of this
 -- information is exposed via 'ItemInfo' values.
--- 
+--
 -- Note that the underlying C library stores secrets in non-pageable memory,
 -- but the Haskell bindings currently do not.
 --
@@ -37,11 +39,6 @@
 -- may read, write or delete an item. The read access applies only to
 -- reading the secret. All applications can read other parts of the item.
 -- ACLs are accessed and changed through 'AccessControl' values.
--- 
-{-# LANGUAGE ForeignFunctionInterface #-}
-#include <gnome-keyring.h>
-{# context prefix = "gnome_keyring_" #}
-
 module Gnome.Keyring.Item
 	(
 	-- * Items
@@ -78,14 +75,17 @@ module Gnome.Keyring.Item
 	, findItems
 	) where
 
-import Control.Exception (bracket)
-import Data.Set (Set, toList, fromList)
-import Data.Text.Lazy (Text)
+import           Control.Exception (bracket)
+import           Data.Set (Set, toList, fromList)
+import           Data.Text.Lazy (Text)
 
-import Gnome.Keyring.ItemInfo
-import Gnome.Keyring.Internal.FFI
-import Gnome.Keyring.Internal.Operation
-import Gnome.Keyring.Internal.Types
+import           Gnome.Keyring.ItemInfo
+import           Gnome.Keyring.Internal.FFI
+import           Gnome.Keyring.Internal.Operation
+import           Gnome.Keyring.Internal.Types
+
+#include <gnome-keyring.h>
+{# context prefix = "gnome_keyring_" #}
 
 data ItemInfoFlag
 	= ItemInfoBasics
@@ -101,16 +101,15 @@ cItemInfoFlags = foldr (.|.) 0 . map flagValue . toList where
 	flagValue ItemInfoSecret = 1
 
 -- | Create a new item in a keyring.
--- 
+--
 -- The user may have been prompted to unlock necessary keyrings. If 'Nothing'
 -- is specified as the keyring and no default keyring exists, the user will
 -- be prompted to create a new keyring.
--- 
+--
 -- If an existing item should be updated, the user may be prompted for access
 -- to the existing item.
--- 
+--
 -- Whether a new item is created or not, the ID of the item will be returned.
--- 
 itemCreate :: Maybe KeyringName
            -> ItemType
            -> Text -- ^ Display name
@@ -145,10 +144,9 @@ itemCreate k t dn as s u = itemIDOperation
 	} -> `Result' result #}
 
 -- | Delete an item in a keyring.
--- 
+--
 -- The user may be prompted if the calling application doesn't have
 -- necessary access to delete the item.
--- 
 itemDelete :: Maybe KeyringName -> ItemID -> Operation ()
 itemDelete k item = voidOperation
 	(item_delete k item)
@@ -168,10 +166,9 @@ itemDelete k item = voidOperation
 	} -> `(Result, ())' resultAndTuple #}
 
 -- | Get information about an item and its secret.
--- 
+--
 -- The user may be prompted if the calling application doesn't have
 -- necessary access to read the item with its secret.
--- 
 itemGetInfo :: Maybe KeyringName -> ItemID -> Operation ItemInfo
 itemGetInfo k item = itemInfoOperation
 	(item_get_info k item)
@@ -192,11 +189,10 @@ itemGetInfo k item = itemInfoOperation
 	} -> `Result' result #}
 
 -- | Get information about an item, optionally retrieving its secret.
--- 
+--
 -- If the flags include 'ItemInfoSecret', then the user may be prompted if
 -- the calling application doesn't have necessary access to read the item
 -- with its secret.
--- 
 itemGetInfoFull :: Maybe KeyringName -> ItemID -> Set ItemInfoFlag
                 -> Operation ItemInfo
 itemGetInfoFull k item flags = itemInfoOperation
@@ -220,10 +216,9 @@ itemGetInfoFull k item flags = itemInfoOperation
 	} -> `Result' result #}
 
 -- | Set information on an item, like its display name, secret, etc.
--- 
+--
 -- Only the fields in the info info which are non-'Nothing' or non-zero
 -- will be set on the item.
--- 
 itemSetInfo :: Maybe KeyringName -> ItemID -> ItemInfo -> Operation ()
 itemSetInfo k item info = voidOperation
 	(item_set_info k item info)
@@ -249,7 +244,7 @@ itemSetInfo k item info = voidOperation
 -- with an item. These can also be used to search for relevant items. Use
 -- 'itemGetAttributes' or 'itemSetAttributes' to manipulate attributes in
 -- the keyring.
--- 
+--
 -- Each attribute is either Unicode text, or an unsigned 32-bit integer.
 
 {# enum GnomeKeyringAttributeType as AttributeType {} #}
@@ -314,7 +309,6 @@ attributeListOperation = operationImpl $ \checkResult ->
 	checkResult cres $ peekAttributeList array
 
 -- | Get all the attributes for an item.
--- 
 itemGetAttributes :: Maybe KeyringName -> ItemID -> Operation [Attribute]
 itemGetAttributes k item = attributeListOperation
 	(item_get_attributes k item)
@@ -336,7 +330,6 @@ itemGetAttributes k item = attributeListOperation
 
 -- | Set all the attributes for an item. These will replace any previous
 -- attributes set on the item.
--- 
 itemSetAttributes :: Maybe KeyringName -> ItemID -> [Attribute] -> Operation ()
 itemSetAttributes k item as = voidOperation
 	(item_set_attributes k item as)
@@ -436,7 +429,6 @@ accessControlListOperation = operationImpl $ \checkResult ->
 	checkResult cres $ mapGList peekAccessControl list
 
 -- | Get the access control list for an item.
--- 
 itemGetACL :: Maybe KeyringName -> ItemID -> Operation [AccessControl]
 itemGetACL k item = accessControlListOperation
 	(item_get_acl k item)
@@ -458,7 +450,6 @@ itemGetACL k item = accessControlListOperation
 
 -- | Set the full access control list on an item. This replaces any previous
 -- ACL set on the item.
--- 
 itemSetACL :: Maybe KeyringName -> ItemID -> [AccessControl] -> Operation ()
 itemSetACL k item acl = voidOperation
 	(item_set_acl k item acl)
@@ -481,10 +472,9 @@ itemSetACL k item acl = voidOperation
 
 -- | Will grant the application access rights to the item, provided callee
 -- has write access to said item.
--- 
+--
 -- This is similar to performing 'itemGetACL' and 'itemSetACL' with
 -- appropriate parameters.
--- 
 itemGrantAccessRights :: Maybe KeyringName
                       -> Text -- ^ Display name
                       -> Text -- ^ Application executable path
@@ -543,10 +533,9 @@ foundItemsOperation = operationImpl $ \checkResult ->
 
 -- | Searches through all keyrings for items that match the attributes. The
 -- matches are for exact equality.
--- 
+--
 -- The user may be prompted to unlock necessary keyrings, and will be
 -- prompted for access to the items if needed.
--- 
 findItems :: ItemType -> [Attribute] -> Operation [FoundItem]
 findItems t as = foundItemsOperation
 	(find_items t as)

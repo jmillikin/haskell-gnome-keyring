@@ -1,18 +1,17 @@
 name: gnome-keyring
-version: 0.2.2.6
-synopsis: Bindings for libgnome-keyring
+version: 0.3
 license: GPL-3
 license-file: license.txt
-author: John Millikin
-maintainer: jmillikin@gmail.com
+author: John Millikin <jmillikin@gmail.com>
+maintainer: John Millikin <jmillikin@gmail.com>
 build-type: Simple
-cabal-version: >=1.6
+cabal-version: >= 1.6
 category: Desktop
 stability: unstable
+homepage: https://john-millikin.com/software/hs-gnome-keyring/
 bug-reports: mailto:jmillikin@gmail.com
-homepage: http://john-millikin.com/software/bindings/gnome-keyring/
-tested-with: GHC==6.12.1
 
+synopsis: Bindings for libgnome-keyring
 description:
   The GNOME Keyring is a service for securely storing per-user secret
   information, such as passwords and encryption keys. This library is a
@@ -27,10 +26,16 @@ extra-source-files:
 
 source-repository head
   type: bazaar
-  location: http://john-millikin.com/software/bindings/gnome-keyring/
+  location: https://john-millikin.com/software/hs-gnome-keyring/
+
+source-repository this
+  type: bazaar
+  location: https://john-millikin.com/branches/hs-gnome-keyring/0.3/
+  tag: gnome-keyring_0.3
 
 library
-  ghc-options: -Wall
+  hs-source-dirs: lib
+  ghc-options: -Wall -O2
 
   build-depends:
       base >= 4 && < 5
