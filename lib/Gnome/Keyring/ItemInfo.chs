@@ -31,7 +31,7 @@ module Gnome.Keyring.ItemInfo
 	) where
 
 import           Control.Exception (bracket)
-import           Data.Text.Lazy (Text)
+import           Data.Text (Text)
 import           Data.Time (UTCTime)
 
 import           Gnome.Keyring.Internal.FFI

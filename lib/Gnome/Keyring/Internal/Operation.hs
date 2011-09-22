@@ -30,7 +30,7 @@ module Gnome.Keyring.Internal.Operation
 
 import           Control.Exception (throwIO)
 import           Control.Monad (join)
-import           Data.Text.Lazy (Text)
+import           Data.Text (Text)
 
 import           Gnome.Keyring.Internal.FFI
 import           Gnome.Keyring.Internal.Types

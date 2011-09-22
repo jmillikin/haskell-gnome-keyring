@@ -54,10 +54,9 @@ module Gnome.Keyring.Internal.FFI
 	) where
 
 import           Control.Exception (bracket)
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Lazy as BSL
-import           Data.Text.Lazy (Text)
-import           Data.Text.Lazy.Encoding (encodeUtf8, decodeUtf8)
+import qualified Data.ByteString as ByteString
+import           Data.Text (Text)
+import           Data.Text.Encoding (encodeUtf8, decodeUtf8)
 import           Data.Time (UTCTime)
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 
@@ -71,14 +70,14 @@ cToUTC :: Integral a => a -> UTCTime
 cToUTC = posixSecondsToUTCTime . fromIntegral
 
 withText :: Text -> (CString -> IO a) -> IO a
-withText = BS.useAsCString . BS.concat . BSL.toChunks . encodeUtf8
+withText = ByteString.useAsCString . encodeUtf8
 
 peekText :: CString -> IO Text
 peekText cstr
 	| cstr == nullPtr = error "Gnome.Keyring.FFI.peekText nullPtr"
 	| otherwise       = do
-		bytes <- BS.packCString cstr
-		return . decodeUtf8 . BSL.fromChunks $ [bytes]
+		bytes <- ByteString.packCString cstr
+		return (decodeUtf8 bytes)
 
 withNullableText :: Maybe Text -> (CString -> IO a) -> IO a
 withNullableText = maybeWith withText

@@ -77,7 +77,7 @@ module Gnome.Keyring.Item
 
 import           Control.Exception (bracket)
 import           Data.Set (Set, toList, fromList)
-import           Data.Text.Lazy (Text)
+import           Data.Text (Text)
 
 import           Gnome.Keyring.ItemInfo
 import           Gnome.Keyring.Internal.FFI

@@ -54,7 +54,7 @@ module Gnome.Keyring.Keyring
 	) where
 
 import           Control.Exception (bracket)
-import           Data.Text.Lazy (Text)
+import           Data.Text (Text)
 
 import           Gnome.Keyring.Item (findItems) -- for docs
 import           Gnome.Keyring.ItemInfo

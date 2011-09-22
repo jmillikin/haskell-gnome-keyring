@@ -25,7 +25,7 @@ module Gnome.Keyring.Internal.Types
 	) where
 
 import           Control.Exception (Exception)
-import           Data.Text.Lazy (Text)
+import           Data.Text (Text)
 import           Data.Typeable (Typeable)
 import           Foreign (Ptr)
 
