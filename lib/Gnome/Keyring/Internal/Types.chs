@@ -25,7 +25,7 @@ module Gnome.Keyring.Internal.Types
 	) where
 
 import           Control.Exception (Exception)
-import           Data.Text (Text)
+import           Data.Text (Text, pack)
 import           Data.Typeable (Typeable)
 import           Foreign (Ptr)
 
@@ -45,6 +45,7 @@ data Error
 	| ErrorCancelled
 	| ErrorKeyringAlreadyExists
 	| ErrorNoMatch
+	| ErrorUnknown Text
 	deriving (Show, Eq, Typeable)
 
 instance Exception Error
@@ -63,7 +64,7 @@ resultToError RESULT_IO_ERROR = ErrorIOError
 resultToError RESULT_CANCELLED = ErrorCancelled
 resultToError RESULT_KEYRING_ALREADY_EXISTS = ErrorKeyringAlreadyExists
 resultToError RESULT_NO_MATCH = ErrorNoMatch
-resultToError x = error $ "Not an error: " ++ show x
+resultToError x = ErrorUnknown (pack (show x))
 
 result :: Integral a => a -> Result
 result = toEnum . fromIntegral

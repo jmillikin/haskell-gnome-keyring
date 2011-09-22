@@ -31,7 +31,7 @@ module Gnome.Keyring.ItemInfo
 	) where
 
 import           Control.Exception (bracket)
-import           Data.Text (Text)
+import           Data.Text (Text, pack)
 import           Data.Time (UTCTime)
 
 import           Gnome.Keyring.Internal.FFI
@@ -55,6 +55,7 @@ data ItemType
 	| ItemChainedKeyringPassword
 	| ItemEncryptionKeyPassword
 	| ItemPublicKeyStorage
+	| ItemTypeUnknown Text
 	deriving (Show, Eq)
 
 fromItemType :: ItemType -> CInt
@@ -73,7 +74,7 @@ toItemType ITEM_NOTE = ItemNote
 toItemType ITEM_CHAINED_KEYRING_PASSWORD = ItemChainedKeyringPassword
 toItemType ITEM_ENCRYPTION_KEY_PASSWORD = ItemEncryptionKeyPassword
 toItemType ITEM_PK_STORAGE = ItemPublicKeyStorage
-toItemType x = error $ "Unknown item type: " ++ show x
+toItemType x = ItemTypeUnknown (pack (show x))
 
 -- | Note: setting mtime and ctime will not affect the keyring
 data ItemInfo = ItemInfo
