@@ -18,6 +18,7 @@ module Gnome.Keyring.Internal.Types
 	( KeyringName
 	, CancellationKey (..)
 	, Error (..)
+	, KeyringException (..)
 	, Result (..)
 	, resultToError
 	, result
@@ -48,7 +49,10 @@ data Error
 	| ErrorUnknown Text
 	deriving (Show, Eq, Typeable)
 
-instance Exception Error
+newtype KeyringException = KeyringException Error
+	deriving (Show, Eq, Typeable)
+
+instance Exception KeyringException
 
 {# enum GnomeKeyringResult as Result {}
 	with prefix = "gnome_keyring_"

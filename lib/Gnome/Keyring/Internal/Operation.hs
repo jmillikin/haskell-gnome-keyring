@@ -19,6 +19,7 @@ module Gnome.Keyring.Internal.Operation
 	, async
 	, async'
 	, sync
+	, sync_
 	
 	-- * Implementation helpers for within G.KR
 	, OperationImpl
@@ -41,12 +42,19 @@ data Operation a = Operation
 	}
 
 -- Synchronous operation public API
-sync :: Operation a -> IO a
+sync :: Operation a -> IO (Either Error a)
 sync op = do
 	(res, x) <- syncImpl op
+	return $ case res of
+		RESULT_OK -> Right x
+		_         -> Left (resultToError res)
+
+sync_ :: Operation a -> IO a
+sync_ op = do
+	res <- sync op
 	case res of
-		RESULT_OK -> return x
-		_           -> throwIO $ resultToError res
+		Right x -> return x
+		Left err -> throwIO (KeyringException err)
 
 -- Helper for async operations which return nothing useful
 async' :: Operation a -> (Error -> IO ()) -> IO ()  -> IO CancellationKey

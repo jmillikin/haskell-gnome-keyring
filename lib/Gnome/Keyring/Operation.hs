@@ -28,6 +28,7 @@ module Gnome.Keyring.Operation
 	, async
 	, async'
 	, sync
+	, sync_
 	, cancel
 	) where
 
