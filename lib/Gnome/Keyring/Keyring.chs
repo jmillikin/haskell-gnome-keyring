@@ -14,25 +14,8 @@
 --
 -- You should have received a copy of the GNU General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
--- |
--- Maintainer  : John Millikin <jmillikin@gmail.com>
--- Stability   : experimental
--- Portability : non-portable (FFI)
---
--- GNOME Keyring manages multiple keyrings. Each keyring can store one or
--- more items, containing secrets.
---
--- One of the keyrings is the default keyring, which can in many cases be
--- used by specifying 'Nothing' for a keyring names.
---
--- Each keyring can be in a locked or unlocked state. A password must be
--- specified, either by the user or the calling application, to unlock the
--- keyring.
 module Gnome.Keyring.Keyring
 	( KeyringName
-	
-	-- * Basic operations
 	, getDefaultKeyring
 	, setDefaultKeyring
 	, listKeyringNames
@@ -40,13 +23,9 @@ module Gnome.Keyring.Keyring
 	, delete
 	, changePassword
 	, listItemIDs
-	
-	-- * Locking and unlocking
 	, lock
 	, lockAll
 	, unlock
-	
-	-- * Keyring information
 	, KeyringInfo (..)
 	, KeyringInfoToken
 	, getInfo

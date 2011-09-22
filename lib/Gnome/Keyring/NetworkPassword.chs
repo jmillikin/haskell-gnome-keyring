@@ -14,14 +14,6 @@
 --
 -- You should have received a copy of the GNU General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
-
--- |
--- Maintainer  : John Millikin <jmillikin@gmail.com>
--- Stability   : experimental
--- Portability : non-portable (FFI)
---
--- Networks passwords are a simple way of saving passwords associated with
--- a certain user, server, protocol, and other fields.
 module Gnome.Keyring.NetworkPassword
 	( NetworkPassword (..)
 	, NetworkPasswordLocation (..)
