@@ -51,15 +51,16 @@ library
     Gnome.Keyring
 
   other-modules:
-    Gnome.Keyring.Item
-    Gnome.Keyring.Keyring
-    Gnome.Keyring.NetworkPassword
     Gnome.Keyring.Internal.FFI
     Gnome.Keyring.Internal.Operation
     Gnome.Keyring.Internal.Types
+    Gnome.Keyring.Item
     Gnome.Keyring.ItemInfo
+    Gnome.Keyring.Keyring
     Gnome.Keyring.KeyringInfo
     Gnome.Keyring.Misc
+    Gnome.Keyring.NetworkPassword
+    Gnome.Keyring.Operation
 
   extra-libraries: gnome-keyring
   pkgconfig-depends: gnome-keyring-1
