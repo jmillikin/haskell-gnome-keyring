@@ -8,7 +8,7 @@ build-type: Simple
 cabal-version: >= 1.6
 category: Desktop
 stability: unstable
-homepage: https://john-millikin.com/software/hs-gnome-keyring/
+homepage: https://john-millikin.com/software/haskell-gnome/
 bug-reports: mailto:jmillikin@gmail.com
 
 synopsis: Bindings for libgnome-keyring
@@ -26,11 +26,11 @@ extra-source-files:
 
 source-repository head
   type: bazaar
-  location: https://john-millikin.com/software/hs-gnome-keyring/
+  location: https://john-millikin.com/branches/gnome-keyring/0.3/
 
 source-repository this
   type: bazaar
-  location: https://john-millikin.com/branches/hs-gnome-keyring/0.3/
+  location: https://john-millikin.com/branches/gnome-keyring/0.3/
   tag: gnome-keyring_0.3
 
 library
