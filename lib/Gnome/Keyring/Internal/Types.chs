@@ -15,7 +15,10 @@
 -- You should have received a copy of the GNU General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 module Gnome.Keyring.Internal.Types
-	( KeyringName
+	( Keyring(..)
+	, defaultKeyring
+	, keyring
+	
 	, CancellationKey (..)
 	, Error (..)
 	, KeyringException (..)
@@ -31,7 +34,16 @@ import           Foreign (Ptr)
 
 #include <gnome-keyring.h>
 
-type KeyringName = String
+data Keyring
+	= DefaultKeyring
+	| NamedKeyring String
+	deriving (Eq, Show)
+
+defaultKeyring :: Keyring
+defaultKeyring = DefaultKeyring
+
+keyring :: String -> Keyring
+keyring = NamedKeyring
 
 newtype CancellationKey = CancellationKey (Ptr ())
 

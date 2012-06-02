@@ -82,7 +82,7 @@ cItemInfoFlags = foldr (.|.) 0 . map flagValue . toList where
 -- to the existing item.
 --
 -- Whether a new item is created or not, the ID of the item will be returned.
-itemCreate :: Maybe KeyringName
+itemCreate :: Keyring
            -> ItemType
            -> String -- ^ Display name
            -> [Attribute]
@@ -94,7 +94,7 @@ itemCreate k t dn as s u = itemIDOperation
 	(item_create_sync k t dn as s u)
 
 {# fun item_create
-	{ withNullableUtf8* `Maybe String'
+	{ withKeyringName* `Keyring'
 	, fromItemType `ItemType'
 	, withUtf8* `String'
 	, withAttributeList* `[Attribute]'
@@ -106,7 +106,7 @@ itemCreate k t dn as s u = itemIDOperation
 	} -> `CancellationKey' CancellationKey #}
 
 {# fun item_create_sync
-	{ withNullableUtf8* `Maybe String'
+	{ withKeyringName* `Keyring'
 	, fromItemType `ItemType'
 	, withUtf8* `String'
 	, withAttributeList* `[Attribute]'
@@ -119,13 +119,13 @@ itemCreate k t dn as s u = itemIDOperation
 --
 -- The user may be prompted if the calling application doesn't have
 -- necessary access to delete the item.
-itemDelete :: Maybe KeyringName -> ItemID -> Operation ()
+itemDelete :: Keyring -> ItemID -> Operation ()
 itemDelete k item = voidOperation
 	(item_delete k item)
 	(item_delete_sync k item)
 
 {# fun item_delete
-	{ withNullableUtf8* `Maybe String'
+	{ withKeyringName* `Keyring'
 	, cItemID `ItemID'
 	, id `DoneCallbackPtr'
 	, id `Ptr ()'
@@ -133,7 +133,7 @@ itemDelete k item = voidOperation
 	} -> `CancellationKey' CancellationKey #}
 
 {# fun item_delete_sync
-	{ withNullableUtf8* `Maybe String'
+	{ withKeyringName* `Keyring'
 	, cItemID `ItemID'
 	} -> `(Result, ())' resultAndTuple #}
 
@@ -141,13 +141,13 @@ itemDelete k item = voidOperation
 --
 -- The user may be prompted if the calling application doesn't have
 -- necessary access to read the item with its secret.
-itemGetInfo :: Maybe KeyringName -> ItemID -> Operation ItemInfo
+itemGetInfo :: Keyring -> ItemID -> Operation ItemInfo
 itemGetInfo k item = itemInfoOperation
 	(item_get_info k item)
 	(item_get_info_sync k item)
 
 {# fun item_get_info
-	{ withNullableUtf8* `Maybe String'
+	{ withKeyringName* `Keyring'
 	, cItemID `ItemID'
 	, id `GetItemInfoCallbackPtr'
 	, id `Ptr ()'
@@ -155,7 +155,7 @@ itemGetInfo k item = itemInfoOperation
 	} -> `CancellationKey' CancellationKey #}
 
 {# fun item_get_info_sync
-	{ withNullableUtf8* `Maybe String'
+	{ withKeyringName* `Keyring'
 	, cItemID `ItemID'
 	, alloca- `ItemInfo' stealItemInfo*
 	} -> `Result' result #}
@@ -165,14 +165,14 @@ itemGetInfo k item = itemInfoOperation
 -- If the flags include 'ItemInfoSecret', then the user may be prompted if
 -- the calling application doesn't have necessary access to read the item
 -- with its secret.
-itemGetInfoFull :: Maybe KeyringName -> ItemID -> Set ItemInfoFlag
+itemGetInfoFull :: Keyring -> ItemID -> Set ItemInfoFlag
                 -> Operation ItemInfo
 itemGetInfoFull k item flags = itemInfoOperation
 	(item_get_info_full k item flags)
 	(item_get_info_full_sync k item flags)
 
 {# fun item_get_info_full
-	{ withNullableUtf8* `Maybe String'
+	{ withKeyringName* `Keyring'
 	, cItemID `ItemID'
 	, cItemInfoFlags `Set ItemInfoFlag'
 	, id `GetItemInfoCallbackPtr'
@@ -181,7 +181,7 @@ itemGetInfoFull k item flags = itemInfoOperation
 	} -> `CancellationKey' CancellationKey #}
 
 {# fun item_get_info_full_sync
-	{ withNullableUtf8* `Maybe String'
+	{ withKeyringName* `Keyring'
 	, cItemID `ItemID'
 	, cItemInfoFlags `Set ItemInfoFlag'
 	, alloca- `ItemInfo' stealItemInfo*
@@ -191,13 +191,13 @@ itemGetInfoFull k item flags = itemInfoOperation
 --
 -- Only the fields in the info info which are non-'Nothing' or non-zero
 -- will be set on the item.
-itemSetInfo :: Maybe KeyringName -> ItemID -> ItemInfo -> Operation ()
+itemSetInfo :: Keyring -> ItemID -> ItemInfo -> Operation ()
 itemSetInfo k item info = voidOperation
 	(item_set_info k item info)
 	(item_set_info_sync k item info)
 
 {# fun item_set_info
-	{ withNullableUtf8* `Maybe String'
+	{ withKeyringName* `Keyring'
 	, cItemID `ItemID'
 	, withItemInfo* `ItemInfo'
 	, id `DoneCallbackPtr'
@@ -206,7 +206,7 @@ itemSetInfo k item info = voidOperation
 	} -> `CancellationKey' CancellationKey #}
 
 {# fun item_set_info_sync
-	{ withNullableUtf8* `Maybe String'
+	{ withKeyringName* `Keyring'
 	, cItemID `ItemID'
 	, withItemInfo* `ItemInfo'
 	} -> `(Result, ())' resultAndTuple #}
@@ -273,13 +273,13 @@ attributeListOperation = operationImpl $ \checkResult ->
 	checkResult cres $ peekAttributeList array
 
 -- | Get all the attributes for an item.
-itemGetAttributes :: Maybe KeyringName -> ItemID -> Operation [Attribute]
+itemGetAttributes :: Keyring -> ItemID -> Operation [Attribute]
 itemGetAttributes k item = attributeListOperation
 	(item_get_attributes k item)
 	(item_get_attributes_sync k item)
 
 {# fun item_get_attributes
-	{ withNullableUtf8* `Maybe String'
+	{ withKeyringName* `Keyring'
 	, cItemID `ItemID'
 	, id `GetAttributesCallbackPtr'
 	, id `Ptr ()'
@@ -287,20 +287,20 @@ itemGetAttributes k item = attributeListOperation
 	} -> `CancellationKey' CancellationKey #}
 
 {# fun item_get_attributes_sync
-	{ withNullableUtf8* `Maybe String'
+	{ withKeyringName* `Keyring'
 	, cItemID `ItemID'
 	, alloca- `[Attribute]' stealAttributeList*
 	} -> `Result' result #}
 
 -- | Set all the attributes for an item. These will replace any previous
 -- attributes set on the item.
-itemSetAttributes :: Maybe KeyringName -> ItemID -> [Attribute] -> Operation ()
+itemSetAttributes :: Keyring -> ItemID -> [Attribute] -> Operation ()
 itemSetAttributes k item as = voidOperation
 	(item_set_attributes k item as)
 	(item_set_attributes_sync k item as)
 
 {# fun item_set_attributes
-	{ withNullableUtf8* `Maybe String'
+	{ withKeyringName* `Keyring'
 	, cItemID `ItemID'
 	, withAttributeList* `[Attribute]'
 	, id `DoneCallbackPtr'
@@ -309,7 +309,7 @@ itemSetAttributes k item as = voidOperation
 	} -> `CancellationKey' CancellationKey #}
 
 {# fun item_set_attributes_sync
-	{ withNullableUtf8* `Maybe String'
+	{ withKeyringName* `Keyring'
 	, cItemID `ItemID'
 	, withAttributeList* `[Attribute]'
 	} -> `(Result, ())' resultAndTuple #}
@@ -387,13 +387,13 @@ accessControlListOperation = operationImpl $ \checkResult ->
 	checkResult cres $ mapGList peekAccessControl list
 
 -- | Get the access control list for an item.
-itemGetACL :: Maybe KeyringName -> ItemID -> Operation [AccessControl]
+itemGetACL :: Keyring -> ItemID -> Operation [AccessControl]
 itemGetACL k item = accessControlListOperation
 	(item_get_acl k item)
 	(item_get_acl_sync k item)
 
 {# fun item_get_acl
-	{ withNullableUtf8* `Maybe String'
+	{ withKeyringName* `Keyring'
 	, cItemID `ItemID'
 	, id `GetListCallbackPtr'
 	, id `Ptr ()'
@@ -401,20 +401,20 @@ itemGetACL k item = accessControlListOperation
 	} -> `CancellationKey' CancellationKey #}
 
 {# fun item_get_acl_sync
-	{ withNullableUtf8* `Maybe String'
+	{ withKeyringName* `Keyring'
 	, cItemID `ItemID'
 	, alloca- `[AccessControl]' stealACL*
 	} -> `Result' result #}
 
 -- | Set the full access control list on an item. This replaces any previous
 -- ACL set on the item.
-itemSetACL :: Maybe KeyringName -> ItemID -> [AccessControl] -> Operation ()
+itemSetACL :: Keyring -> ItemID -> [AccessControl] -> Operation ()
 itemSetACL k item acl = voidOperation
 	(item_set_acl k item acl)
 	(item_set_acl_sync k item acl)
 
 {# fun item_set_acl
-	{ withNullableUtf8* `Maybe String'
+	{ withKeyringName* `Keyring'
 	, cItemID `ItemID'
 	, withACL* `[AccessControl]'
 	, id `DoneCallbackPtr'
@@ -423,7 +423,7 @@ itemSetACL k item acl = voidOperation
 	} -> `CancellationKey' CancellationKey #}
 
 {# fun item_set_acl_sync
-	{ withNullableUtf8* `Maybe String'
+	{ withKeyringName* `Keyring'
 	, cItemID `ItemID'
 	, withACL* `[AccessControl]'
 	} -> `(Result, ())' resultAndTuple #}
@@ -433,7 +433,7 @@ itemSetACL k item acl = voidOperation
 --
 -- This is similar to performing 'itemGetACL' and 'itemSetACL' with
 -- appropriate parameters.
-itemGrantAccessRights :: Maybe KeyringName
+itemGrantAccessRights :: Keyring
                       -> String -- ^ Display name
                       -> String -- ^ Application executable path
                       -> ItemID
@@ -444,7 +444,7 @@ itemGrantAccessRights k d p item r = voidOperation
 	(item_grant_access_rights_sync k d p item r)
 
 {# fun item_grant_access_rights
-	{ withNullableUtf8* `Maybe String'
+	{ withKeyringName* `Keyring'
 	, withUtf8* `String'
 	, withUtf8* `String'
 	, cItemID `ItemID'
@@ -455,7 +455,7 @@ itemGrantAccessRights k d p item r = voidOperation
 	} -> `CancellationKey' CancellationKey #}
 
 {# fun item_grant_access_rights_sync
-	{ withNullableUtf8* `Maybe String'
+	{ withKeyringName* `Keyring'
 	, withUtf8* `String'
 	, withUtf8* `String'
 	, cItemID `ItemID'
@@ -463,7 +463,7 @@ itemGrantAccessRights k d p item r = voidOperation
 	} -> `(Result, ())' resultAndTuple #}
 
 data FoundItem = FoundItem
-	{ foundItemKeyring    :: KeyringName
+	{ foundItemKeyring    :: Keyring
 	, foundItemID         :: ItemID
 	, foundItemAttributes :: [Attribute]
 	, foundItemSecret     :: String
@@ -472,12 +472,12 @@ data FoundItem = FoundItem
 
 peekFound :: Ptr () -> IO FoundItem
 peekFound f = do
-	keyring <- peekUtf8 =<< {# get GnomeKeyringFound->keyring #} f
+	keyringName <- peekUtf8 =<< {# get GnomeKeyringFound->keyring #} f
 	itemID <- {# get GnomeKeyringFound->item_id #} f
 	attrs <- peekAttributeList =<< {# get GnomeKeyringFound->attributes #} f
 	secret <- peekUtf8 =<< {# get GnomeKeyringFound->secret #} f
 	let itemID' = ItemID $ fromIntegral itemID
-	return $ FoundItem keyring itemID' attrs secret
+	return (FoundItem (keyring keyringName) itemID' attrs secret)
 
 stealFoundList :: Ptr (Ptr ()) -> IO [FoundItem]
 stealFoundList ptr = bracket (peek ptr)

@@ -67,7 +67,9 @@ module Gnome.Keyring
 	
 	-- * Keyrings
 	-- $keyring-doc
-	, KeyringName
+	, Keyring
+	, defaultKeyring
+	, keyring
 	
 	-- ** Basic operations
 	, getDefaultKeyring

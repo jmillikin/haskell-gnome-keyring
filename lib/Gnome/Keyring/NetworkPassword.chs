@@ -32,7 +32,7 @@ import           Gnome.Keyring.Internal.Types
 {# context prefix = "gnome_keyring_" #}
 
 data NetworkPassword = NetworkPassword
-	{ networkPasswordKeyring  :: KeyringName
+	{ networkPasswordKeyring  :: Keyring
 	, networkPasswordItemID   :: ItemID
 	, networkPasswordLocation :: NetworkPasswordLocation
 	, networkPassword         :: String
@@ -101,7 +101,7 @@ findNetworkPassword loc = let
 -- Whether a new item is created or not, the item's ID will be returned.
 --
 -- Network passwords are items with the 'ItemType' 'ItemNetworkPassword'.
-setNetworkPassword :: Maybe KeyringName -> NetworkPasswordLocation ->
+setNetworkPassword :: Keyring -> NetworkPasswordLocation ->
                       String ->
                       Operation ItemID
 setNetworkPassword k loc secret = let
@@ -117,7 +117,7 @@ setNetworkPassword k loc secret = let
 		(set_network_password_sync k p1 p2 p3 p4 p5 p6 p7 secret)
 
 {# fun set_network_password
-	{ withNullableUtf8* `Maybe String'
+	{ withKeyringName* `Keyring'
 	, withNullableUtf8* `Maybe String'
 	, withNullableUtf8* `Maybe String'
 	, withNullableUtf8* `Maybe String'
@@ -132,7 +132,7 @@ setNetworkPassword k loc secret = let
 	} -> `CancellationKey' CancellationKey #}
 
 {# fun set_network_password_sync
-	{ withNullableUtf8* `Maybe String'
+	{ withKeyringName* `Keyring'
 	, withNullableUtf8* `Maybe String'
 	, withNullableUtf8* `Maybe String'
 	, withNullableUtf8* `Maybe String'
@@ -165,10 +165,10 @@ peekPassword pwd = do
 		}
 	
 	-- Keyring, item, and secret
-	keyring <- peekUtf8 =<< {# get GnomeKeyringNetworkPasswordData->keyring #} pwd
+	keyringName <- peekUtf8 =<< {# get GnomeKeyringNetworkPasswordData->keyring #} pwd
 	itemID <- (ItemID . fromIntegral) `fmap` {# get GnomeKeyringNetworkPasswordData->item_id #} pwd
 	password <- peekUtf8 =<< {# get GnomeKeyringNetworkPasswordData->password #} pwd
-	return $ NetworkPassword keyring itemID loc password
+	return (NetworkPassword (keyring keyringName) itemID loc password)
 
 stealPasswordList :: Ptr (Ptr ()) -> IO [NetworkPassword]
 stealPasswordList ptr = bracket (peek ptr)

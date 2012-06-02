@@ -15,7 +15,10 @@
 -- You should have received a copy of the GNU General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 module Gnome.Keyring.Keyring
-	( KeyringName
+	( Keyring
+	, keyring
+	, defaultKeyring
+	
 	, getDefaultKeyring
 	, setDefaultKeyring
 	, listKeyringNames
@@ -44,9 +47,8 @@ import           Gnome.Keyring.Internal.Types
 #include <gnome-keyring.h>
 {# context prefix = "gnome_keyring_" #}
 
--- | Get the default keyring name. If no default keyring exists, then
--- 'Nothing' will be returned.
-getDefaultKeyring :: Operation (Maybe KeyringName)
+-- | Get the default keyring name.
+getDefaultKeyring :: Operation (Maybe String)
 getDefaultKeyring = maybeStringOperation
 	get_default_keyring
 	get_default_keyring_sync
@@ -65,7 +67,7 @@ stealNullableUtf8Ptr :: Ptr CString -> IO (Maybe String)
 stealNullableUtf8Ptr ptr = bracket (peek ptr) free peekNullableUtf8
 
 -- | Change the default keyring.
-setDefaultKeyring :: KeyringName -> Operation ()
+setDefaultKeyring :: String -> Operation ()
 setDefaultKeyring k = voidOperation
 	(set_default_keyring k)
 	(set_default_keyring_sync k)
@@ -83,7 +85,7 @@ setDefaultKeyring k = voidOperation
 
 -- | Get a list of keyring names. If no keyrings exist, an empty list
 -- will be returned.
-listKeyringNames :: Operation [KeyringName]
+listKeyringNames :: Operation [String]
 listKeyringNames = stringListOperation
 	list_keyring_names
 	list_keyring_names_sync
@@ -106,7 +108,7 @@ stealUtf8List ptr = bracket (peek ptr)
 -- | Create a new keyring with the specified name. In most cases, 'Nothing'
 -- will be passed as the password, which will prompt the user to enter a
 -- password of their choice.
-create :: KeyringName -> Maybe String -> Operation ()
+create :: String -> Maybe String -> Operation ()
 create k p = voidOperation (c_create k p) (create_sync k p)
 
 {# fun create as c_create
@@ -124,7 +126,7 @@ create k p = voidOperation (c_create k p) (create_sync k p)
 
 -- | Delete a keyring. Once a keyring is deleted, there is no mechanism for
 -- recovery of its contents.
-delete :: KeyringName -> Operation ()
+delete :: String -> Operation ()
 delete k = voidOperation (c_delete k) (delete_sync k)
 
 {# fun delete as c_delete
@@ -143,18 +145,18 @@ delete k = voidOperation (c_delete k) (delete_sync k)
 --
 -- Most keyring operations involving items require that the keyring first be
 -- unlocked. One exception is 'findItems' and related computations.
-lock :: Maybe KeyringName -> Operation ()
+lock :: Keyring -> Operation ()
 lock k = voidOperation (c_lock k) (lock_sync k)
 
 {# fun lock as c_lock
-	{ withNullableUtf8* `Maybe String'
+	{ withKeyringName* `Keyring'
 	, id `DoneCallbackPtr'
 	, id `Ptr ()'
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
 {# fun lock_sync
-	{ withNullableUtf8* `Maybe String'
+	{ withKeyringName* `Keyring'
 	} -> `(Result, ())' resultAndTuple #}
 
 -- | Lock all the keyrings, so that their contents may not be accessed
@@ -177,11 +179,11 @@ lockAll = voidOperation lock_all lock_all_sync
 --
 -- Most keyring operations involving items require that the keyring first be
 -- unlocked. One exception is 'findItems' and related computations.
-unlock :: Maybe KeyringName -> Maybe String -> Operation ()
+unlock :: Keyring -> Maybe String -> Operation ()
 unlock k p = voidOperation (c_unlock k p) (unlock_sync k p)
 
 {# fun unlock as c_unlock
-	{ withNullableUtf8* `Maybe String'
+	{ withKeyringName* `Keyring '
 	, withNullableUtf8* `Maybe String'
 	, id `DoneCallbackPtr'
 	, id `Ptr ()'
@@ -189,36 +191,36 @@ unlock k p = voidOperation (c_unlock k p) (unlock_sync k p)
 	} -> `CancellationKey' CancellationKey #}
 
 {# fun unlock_sync
-	{ withNullableUtf8* `Maybe String'
+	{ withKeyringName* `Keyring '
 	, withNullableUtf8* `Maybe String'
 	} -> `(Result, ())' resultAndTuple #}
 
 -- | Get information about the keyring.
-getInfo :: Maybe KeyringName -> Operation KeyringInfo
+getInfo :: Keyring -> Operation KeyringInfo
 getInfo k = keyringInfoOperation (get_info k) (get_info_sync k)
 
 {# fun get_info
-	{ withNullableUtf8* `Maybe String'
+	{ withKeyringName* `Keyring'
 	, id `GetKeyringInfoCallbackPtr'
 	, id `Ptr ()'
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
 {# fun get_info_sync
-	{ withNullableUtf8* `Maybe String'
+	{ withKeyringName* `Keyring'
 	, alloca- `KeyringInfo' stealKeyringInfoPtr*
 	} -> `Result' result #}
 
 -- | Set flags and info for the keyring. The only fields in the
 -- 'KeyringInfo' which are used are 'keyringLockOnIdle' and
 -- 'keyringLockTimeout'.
-setInfo :: Maybe KeyringName -> KeyringInfo -> Operation ()
+setInfo :: Keyring -> KeyringInfo -> Operation ()
 setInfo k info = voidOperation
 	(set_info k info)
 	(set_info_sync k info)
 
 {# fun set_info
-	{ withNullableUtf8* `Maybe String'
+	{ withKeyringName* `Keyring'
 	, withKeyringInfo* `KeyringInfo'
 	, id `DoneCallbackPtr'
 	, id `Ptr ()'
@@ -226,14 +228,14 @@ setInfo k info = voidOperation
 	} -> `CancellationKey' CancellationKey #}
 
 {# fun set_info_sync
-	{ withNullableUtf8* `Maybe String'
+	{ withKeyringName* `Keyring'
 	, withKeyringInfo* `KeyringInfo'
 	} -> `(Result, ())' resultAndTuple #}
 
 -- | Change the password for a keyring. In most cases, 'Nothing' would
 -- be specified for both the original and new passwords to allow the user
 -- to type both.
-changePassword :: KeyringName
+changePassword :: String
                -> Maybe String -- ^ Old password
                -> Maybe String -- ^ New password
                -> Operation ()
@@ -259,19 +261,19 @@ changePassword k op np = voidOperation
 -- | Get a list of all the IDs for items in the keyring. All items which are
 -- not flagged as 'ItemApplicationSecret' are included in the list. This
 -- includes items that the calling application may not (yet) have access to.
-listItemIDs :: Maybe KeyringName -> Operation [ItemID]
+listItemIDs :: Keyring -> Operation [ItemID]
 listItemIDs name = itemIDListOperation
 	(list_item_ids name)
 	(list_item_ids_sync name)
 
 {# fun list_item_ids
-	{ withNullableUtf8* `Maybe String'
+	{ withKeyringName* `Keyring'
 	, id `GetListCallbackPtr'
 	, id `Ptr ()'
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
 {# fun list_item_ids_sync
-	{ withNullableUtf8* `Maybe String'
+	{ withKeyringName* `Keyring'
 	, alloca- `[ItemID]' stealItemIDList*
 	} -> `Result' result #}

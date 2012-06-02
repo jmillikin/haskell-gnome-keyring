@@ -42,6 +42,7 @@ module Gnome.Keyring.Internal.FFI
 	, withUtf8
 	, peekUtf8
 	, withNullableUtf8
+	, withKeyringName
 	, peekNullableUtf8
 	, stealNullableUtf8
 	, mapGList
@@ -64,6 +65,8 @@ import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 -- Import unqualified for c2hs
 import           Foreign
 import           Foreign.C
+
+import           Gnome.Keyring.Internal.Types (Keyring(..))
 
 #include <gnome-keyring.h>
 
@@ -91,6 +94,12 @@ peekNullableUtf8= maybePeek peekUtf8
 
 stealNullableUtf8 :: CString -> IO (Maybe String)
 stealNullableUtf8 cstr = bracket (return cstr) free peekNullableUtf8
+
+withKeyringName :: Keyring -> (CString -> IO a) -> IO a
+withKeyringName k = withNullableUtf8 name where
+	name = case k of
+		DefaultKeyring -> Nothing
+		NamedKeyring s -> Just s
 
 -- Convert GList to []
 mapGList :: (Ptr a -> IO b) -> Ptr () -> IO [b]
