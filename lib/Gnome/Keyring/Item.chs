@@ -26,7 +26,6 @@ module Gnome.Keyring.Item
 	, itemGetAttributes
 	, itemSetAttributes
 	
-	, ItemInfoFlag (..)
 	, ItemInfo
 	, itemType
 	, itemSecret
@@ -34,9 +33,8 @@ module Gnome.Keyring.Item
 	, itemModified
 	, itemCreated
 	
-	, itemGetInfo
-	, itemGetInfoFull
-	, itemSetInfo
+	, getItemInfo
+	, setItemInfo
 	
 	, AccessControl (..)
 	, AccessType (..)
@@ -63,18 +61,8 @@ import           Gnome.Keyring.Internal.Types
 #include <gnome-keyring.h>
 {# context prefix = "gnome_keyring_" #}
 
-data ItemInfoFlag
-	= ItemInfoBasics
-	| ItemInfoSecret
-	deriving (Show, Eq)
-
 cItemID :: Integral a => ItemID -> a
 cItemID (ItemID x) = fromIntegral x
-
-cItemInfoFlags :: Bits a => Set ItemInfoFlag -> a
-cItemInfoFlags = foldr (.|.) 0 . map flagValue . toList where
-	flagValue ItemInfoBasics = 0
-	flagValue ItemInfoSecret = 1
 
 -- | Create a new item in a keyring.
 --
@@ -145,40 +133,18 @@ itemDelete k item = voidOperation
 --
 -- The user may be prompted if the calling application doesn't have
 -- necessary access to read the item with its secret.
-itemGetInfo :: Keyring -> ItemID -> Operation ItemInfo
-itemGetInfo k item = itemInfoOperation
-	(item_get_info k item)
-	(item_get_info_sync k item)
-
-{# fun item_get_info
-	{ withKeyringName* `Keyring'
-	, cItemID `ItemID'
-	, id `GetItemInfoCallbackPtr'
-	, id `Ptr ()'
-	, id `DestroyNotifyPtr'
-	} -> `CancellationKey' CancellationKey #}
-
-{# fun item_get_info_sync
-	{ withKeyringName* `Keyring'
-	, cItemID `ItemID'
-	, alloca- `ItemInfo' stealItemInfo*
-	} -> `Result' result #}
-
--- | Get information about an item, optionally retrieving its secret.
---
--- If the flags include 'ItemInfoSecret', then the user may be prompted if
--- the calling application doesn't have necessary access to read the item
--- with its secret.
-itemGetInfoFull :: Keyring -> ItemID -> Set ItemInfoFlag
-                -> Operation ItemInfo
-itemGetInfoFull k item flags = itemInfoOperation
-	(item_get_info_full k item flags)
-	(item_get_info_full_sync k item flags)
+getItemInfo :: Keyring
+            -> Bool -- ^ Whether to read the secret.
+            -> ItemID
+            -> Operation ItemInfo
+getItemInfo k includeSecret item = itemInfoOperation
+	(item_get_info_full k item includeSecret)
+	(item_get_info_full_sync k item includeSecret)
 
 {# fun item_get_info_full
 	{ withKeyringName* `Keyring'
 	, cItemID `ItemID'
-	, cItemInfoFlags `Set ItemInfoFlag'
+	, cItemInfoFlags `Bool'
 	, id `GetItemInfoCallbackPtr'
 	, id `Ptr ()'
 	, id `DestroyNotifyPtr'
@@ -187,16 +153,19 @@ itemGetInfoFull k item flags = itemInfoOperation
 {# fun item_get_info_full_sync
 	{ withKeyringName* `Keyring'
 	, cItemID `ItemID'
-	, cItemInfoFlags `Set ItemInfoFlag'
+	, cItemInfoFlags `Bool'
 	, alloca- `ItemInfo' stealItemInfo*
 	} -> `Result' result #}
+
+cItemInfoFlags :: Integral a => Bool -> a
+cItemInfoFlags includeSecret = if includeSecret then 1 else 0
 
 -- | Set information on an item, like its display name, secret, etc.
 --
 -- Only the fields in the info info which are non-'Nothing' or non-zero
 -- will be set on the item.
-itemSetInfo :: Keyring -> ItemID -> ItemInfo -> Operation ()
-itemSetInfo k item info = voidOperation
+setItemInfo :: Keyring -> ItemID -> ItemInfo -> Operation ()
+setItemInfo k item info = voidOperation
 	(item_set_info k item info)
 	(item_set_info_sync k item info)
 

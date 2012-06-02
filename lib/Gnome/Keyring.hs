@@ -33,10 +33,8 @@ module Gnome.Keyring
 	, ItemType (..)
 	, itemCreate
 	, itemDelete
-	, itemGetInfo
-	, ItemInfoFlag (..)
-	, itemGetInfoFull
-	, itemSetInfo
+	, getItemInfo
+	, setItemInfo
 	
 	-- ** Item info
 	, ItemInfo
