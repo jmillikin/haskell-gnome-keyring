@@ -44,7 +44,11 @@ module Gnome.Keyring.Item
 	, itemSetACL
 	, itemGrantAccessRights
 	
-	, FoundItem (..)
+	, FoundItem
+	, foundItemKeyring
+	, foundItemID
+	, foundItemAttributes
+	, foundItemSecret
 	, findItems
 	) where
 

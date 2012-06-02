@@ -62,7 +62,11 @@ module Gnome.Keyring
 	, itemGrantAccessRights
 	
 	-- ** Searching for items
-	, FoundItem (..)
+	, FoundItem
+	, foundItemKeyring
+	, foundItemID
+	, foundItemAttributes
+	, foundItemSecret
 	, findItems
 	
 	-- * Keyrings
