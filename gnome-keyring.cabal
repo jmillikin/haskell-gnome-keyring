@@ -8,7 +8,7 @@ build-type: Simple
 cabal-version: >= 1.6
 category: Desktop
 stability: unstable
-homepage: https://john-millikin.com/software/haskell-gnome/
+homepage: https://john-millikin.com/software/haskell-gnome-keyring/
 bug-reports: mailto:jmillikin@gmail.com
 
 synopsis: Bindings for libgnome-keyring
@@ -26,26 +26,29 @@ extra-source-files:
 
 source-repository head
   type: bazaar
-  location: https://john-millikin.com/branches/gnome-keyring/0.3/
+  location: https://john-millikin.com/branches/haskell-gnome-keyring/0.3/
 
 source-repository this
   type: bazaar
-  location: https://john-millikin.com/branches/gnome-keyring/0.3/
-  tag: gnome-keyring_0.3
+  location: https://john-millikin.com/branches/haskell-gnome-keyring/0.3/
+  tag: haskell-gnome-keyring_0.3
 
 library
   hs-source-dirs: lib
   ghc-options: -Wall -O2
 
   build-depends:
-      base >= 4 && < 5
+      base >= 4.0 && < 5.0
     , text >= 0.7 && < 0.12
     , bytestring >= 0.9 && < 0.10
-    , containers >= 0.2 && < 0.5
+    , containers >= 0.2 && < 0.6
     , time >= 1.1 && < 1.5
 
   build-tools:
     c2hs >= 0.16
+
+  extra-libraries: gnome-keyring
+  pkgconfig-depends: gnome-keyring-1
 
   exposed-modules:
     Gnome.Keyring
@@ -61,6 +64,3 @@ library
     Gnome.Keyring.Misc
     Gnome.Keyring.NetworkPassword
     Gnome.Keyring.Operation
-
-  extra-libraries: gnome-keyring
-  pkgconfig-depends: gnome-keyring-1
