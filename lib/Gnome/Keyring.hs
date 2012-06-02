@@ -77,15 +77,15 @@ module Gnome.Keyring
 	, getDefaultKeyring
 	, setDefaultKeyring
 	, listKeyringNames
-	, create
-	, delete
+	, createKeyring
+	, deleteKeyring
 	, changePassword
 	, listItemIDs
 	
 	-- ** Locking and unlocking
-	, lock
+	, lockKeyring
 	, lockAll
-	, unlock
+	, unlockKeyring
 	
 	-- ** Keyring information
 	, KeyringInfo (..)

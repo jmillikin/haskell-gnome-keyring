@@ -22,13 +22,13 @@ module Gnome.Keyring.Keyring
 	, getDefaultKeyring
 	, setDefaultKeyring
 	, listKeyringNames
-	, create
-	, delete
+	, createKeyring
+	, deleteKeyring
 	, changePassword
 	, listItemIDs
-	, lock
+	, lockKeyring
 	, lockAll
-	, unlock
+	, unlockKeyring
 	, KeyringInfo (..)
 	, KeyringInfoToken
 	, getInfo
@@ -108,8 +108,8 @@ stealUtf8List ptr = bracket (peek ptr)
 -- | Create a new keyring with the specified name. In most cases, 'Nothing'
 -- will be passed as the password, which will prompt the user to enter a
 -- password of their choice.
-create :: String -> Maybe String -> Operation ()
-create k p = voidOperation (c_create k p) (create_sync k p)
+createKeyring :: String -> Maybe String -> Operation ()
+createKeyring k p = voidOperation (c_create k p) (create_sync k p)
 
 {# fun create as c_create
 	{ withUtf8* `String'
@@ -126,8 +126,8 @@ create k p = voidOperation (c_create k p) (create_sync k p)
 
 -- | Delete a keyring. Once a keyring is deleted, there is no mechanism for
 -- recovery of its contents.
-delete :: String -> Operation ()
-delete k = voidOperation (c_delete k) (delete_sync k)
+deleteKeyring :: String -> Operation ()
+deleteKeyring k = voidOperation (c_delete k) (delete_sync k)
 
 {# fun delete as c_delete
 	{ withUtf8* `String'
@@ -145,8 +145,8 @@ delete k = voidOperation (c_delete k) (delete_sync k)
 --
 -- Most keyring operations involving items require that the keyring first be
 -- unlocked. One exception is 'findItems' and related computations.
-lock :: Keyring -> Operation ()
-lock k = voidOperation (c_lock k) (lock_sync k)
+lockKeyring :: Keyring -> Operation ()
+lockKeyring k = voidOperation (c_lock k) (lock_sync k)
 
 {# fun lock as c_lock
 	{ withKeyringName* `Keyring'
@@ -179,8 +179,8 @@ lockAll = voidOperation lock_all lock_all_sync
 --
 -- Most keyring operations involving items require that the keyring first be
 -- unlocked. One exception is 'findItems' and related computations.
-unlock :: Keyring -> Maybe String -> Operation ()
-unlock k p = voidOperation (c_unlock k p) (unlock_sync k p)
+unlockKeyring :: Keyring -> Maybe String -> Operation ()
+unlockKeyring k p = voidOperation (c_unlock k p) (unlock_sync k p)
 
 {# fun unlock as c_unlock
 	{ withKeyringName* `Keyring '

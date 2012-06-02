@@ -436,10 +436,10 @@ itemGrantAccessRights k d p item r = voidOperation
 	} -> `(Result, ())' resultAndTuple #}
 
 data FoundItem = FoundItem
-	{ foundItemKeyring    :: Keyring
-	, foundItemID         :: ItemID
+	{ foundItemKeyring :: Keyring
+	, foundItemID :: ItemID
 	, foundItemAttributes :: [Attribute]
-	, foundItemSecret     :: String
+	, foundItemSecret :: String
 	}
 	deriving (Show, Eq)
 
