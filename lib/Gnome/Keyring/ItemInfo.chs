@@ -15,7 +15,13 @@
 -- You should have received a copy of the GNU General Public License
 -- along with this program.  If not, see <http://www.gnu.org/licenses/>.
 module Gnome.Keyring.ItemInfo
-	( ItemInfo (..)
+	( ItemInfo
+	, itemType
+	, itemSecret
+	, itemDisplayName
+	, itemModified
+	, itemCreated
+	
 	, ItemType (..)
 	, ItemID (..)
 	
@@ -75,15 +81,20 @@ toItemType ITEM_ENCRYPTION_KEY_PASSWORD = ItemEncryptionKeyPassword
 toItemType ITEM_PK_STORAGE = ItemPublicKeyStorage
 toItemType x = ItemTypeUnknown (show x)
 
--- | Note: setting mtime and ctime will not affect the keyring
 data ItemInfo = ItemInfo
-	{ itemType        :: ItemType
-	, itemSecret      :: Maybe String
+	{ itemType :: ItemType
+	, itemSecret :: Maybe String
 	, itemDisplayName :: Maybe String
-	, itemMTime       :: UTCTime
-	, itemCTime       :: UTCTime
+	, itemMTime :: UTCTime
+	, itemCTime :: UTCTime
 	}
 	deriving (Show, Eq)
+
+itemModified :: ItemInfo -> UTCTime
+itemModified = itemMTime
+
+itemCreated :: ItemInfo -> UTCTime
+itemCreated = itemCTime
 
 peekItemInfo :: Ptr () -> IO ItemInfo
 peekItemInfo info = do

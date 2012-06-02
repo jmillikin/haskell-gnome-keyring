@@ -29,10 +29,22 @@ module Gnome.Keyring
 	
 	-- * Items
 	-- $item-doc
-	, ItemID (..)
+	, ItemID
 	, ItemType (..)
 	, itemCreate
 	, itemDelete
+	, itemGetInfo
+	, ItemInfoFlag (..)
+	, itemGetInfoFull
+	, itemSetInfo
+	
+	-- ** Item info
+	, ItemInfo
+	, itemType
+	, itemSecret
+	, itemDisplayName
+	, itemModified
+	, itemCreated
 	
 	-- ** Item attributes
 	-- $attribute-doc
@@ -40,13 +52,6 @@ module Gnome.Keyring
 	, attributeName
 	, itemGetAttributes
 	, itemSetAttributes
-	
-	-- ** Item info
-	, ItemInfoFlag (..)
-	, ItemInfo (..)
-	, itemGetInfo
-	, itemGetInfoFull
-	, itemSetInfo
 	
 	-- ** Access control
 	-- $access-control-doc

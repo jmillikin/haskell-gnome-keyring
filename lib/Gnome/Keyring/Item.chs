@@ -27,7 +27,13 @@ module Gnome.Keyring.Item
 	, itemSetAttributes
 	
 	, ItemInfoFlag (..)
-	, ItemInfo (..)
+	, ItemInfo
+	, itemType
+	, itemSecret
+	, itemDisplayName
+	, itemModified
+	, itemCreated
+	
 	, itemGetInfo
 	, itemGetInfoFull
 	, itemSetInfo
