@@ -31,7 +31,6 @@ module Gnome.Keyring.ItemInfo
 	) where
 
 import           Control.Exception (bracket)
-import           Data.Text (Text, pack)
 import           Data.Time (UTCTime)
 
 import           Gnome.Keyring.Internal.FFI
@@ -55,7 +54,7 @@ data ItemType
 	| ItemChainedKeyringPassword
 	| ItemEncryptionKeyPassword
 	| ItemPublicKeyStorage
-	| ItemTypeUnknown Text
+	| ItemTypeUnknown String
 	deriving (Show, Eq)
 
 fromItemType :: ItemType -> CInt
@@ -74,13 +73,13 @@ toItemType ITEM_NOTE = ItemNote
 toItemType ITEM_CHAINED_KEYRING_PASSWORD = ItemChainedKeyringPassword
 toItemType ITEM_ENCRYPTION_KEY_PASSWORD = ItemEncryptionKeyPassword
 toItemType ITEM_PK_STORAGE = ItemPublicKeyStorage
-toItemType x = ItemTypeUnknown (pack (show x))
+toItemType x = ItemTypeUnknown (show x)
 
 -- | Note: setting mtime and ctime will not affect the keyring
 data ItemInfo = ItemInfo
 	{ itemType        :: ItemType
-	, itemSecret      :: Maybe Text
-	, itemDisplayName :: Maybe Text
+	, itemSecret      :: Maybe String
+	, itemDisplayName :: Maybe String
 	, itemMTime       :: UTCTime
 	, itemCTime       :: UTCTime
 	}
@@ -89,8 +88,8 @@ data ItemInfo = ItemInfo
 peekItemInfo :: Ptr () -> IO ItemInfo
 peekItemInfo info = do
 	cType <- {# call item_info_get_type #} info
-	secret <- stealNullableText =<< {# call item_info_get_secret #} info
-	name <- stealNullableText =<< {# call item_info_get_display_name #} info
+	secret <- stealNullableUtf8 =<< {# call item_info_get_secret #} info
+	name <- stealNullableUtf8 =<< {# call item_info_get_display_name #} info
 	mtime <- cToUTC `fmap` {# call item_info_get_mtime #} info
 	ctime <- cToUTC `fmap` {# call item_info_get_ctime #} info
 	let type' = toItemType . toEnum . fromIntegral $ cType
@@ -110,8 +109,8 @@ withItemInfo info io = do
 	fptr <- newForeignPtr finalizeItemInfo =<< {# call item_info_new #}
 	withForeignPtr fptr $ \ptr -> do
 	{# call item_info_set_type #} ptr . fromItemType . itemType $ info
-	withNullableText (itemSecret info) $ {# call item_info_set_secret #} ptr
-	withNullableText (itemDisplayName info) $ {# call item_info_set_display_name #} ptr
+	withNullableUtf8 (itemSecret info) $ {# call item_info_set_secret #} ptr
+	withNullableUtf8 (itemDisplayName info) $ {# call item_info_set_display_name #} ptr
 	io ptr
 
 itemIDListOperation :: OperationImpl GetListCallback [ItemID]

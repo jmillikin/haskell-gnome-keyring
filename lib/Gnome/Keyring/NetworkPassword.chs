@@ -22,7 +22,6 @@ module Gnome.Keyring.NetworkPassword
 	) where
 
 import           Control.Exception (bracket)
-import           Data.Text (Text)
 
 import           Gnome.Keyring.ItemInfo
 import           Gnome.Keyring.Internal.FFI
@@ -36,18 +35,18 @@ data NetworkPassword = NetworkPassword
 	{ networkPasswordKeyring  :: KeyringName
 	, networkPasswordItemID   :: ItemID
 	, networkPasswordLocation :: NetworkPasswordLocation
-	, networkPassword         :: Text
+	, networkPassword         :: String
 	}
 	deriving (Show, Eq)
 
 data NetworkPasswordLocation = NetworkPasswordLocation
-	{ locationProtocol :: Maybe Text
-	, locationServer   :: Maybe Text
-	, locationObject   :: Maybe Text
-	, locationAuthType :: Maybe Text
+	{ locationProtocol :: Maybe String
+	, locationServer   :: Maybe String
+	, locationObject   :: Maybe String
+	, locationAuthType :: Maybe String
 	, locationPort     :: Word32
-	, locationUser     :: Maybe Text
-	, locationDomain   :: Maybe Text
+	, locationUser     :: Maybe String
+	, locationDomain   :: Maybe String
 	}
 	deriving (Show, Eq)
 
@@ -71,12 +70,12 @@ findNetworkPassword loc = let
 		(find_network_password_sync p1 p2 p3 p4 p5 p6 p7)
 
 {# fun find_network_password
-	{ withNullableText* `Maybe Text'
-	, withNullableText* `Maybe Text'
-	, withNullableText* `Maybe Text'
-	, withNullableText* `Maybe Text'
-	, withNullableText* `Maybe Text'
-	, withNullableText* `Maybe Text'
+	{ withNullableUtf8* `Maybe String'
+	, withNullableUtf8* `Maybe String'
+	, withNullableUtf8* `Maybe String'
+	, withNullableUtf8* `Maybe String'
+	, withNullableUtf8* `Maybe String'
+	, withNullableUtf8* `Maybe String'
 	, fromIntegral `Word32'
 	, id `GetListCallbackPtr'
 	, id `Ptr ()'
@@ -84,12 +83,12 @@ findNetworkPassword loc = let
 	} -> `CancellationKey' CancellationKey #}
 
 {# fun find_network_password_sync
-	{ withNullableText* `Maybe Text'
-	, withNullableText* `Maybe Text'
-	, withNullableText* `Maybe Text'
-	, withNullableText* `Maybe Text'
-	, withNullableText* `Maybe Text'
-	, withNullableText* `Maybe Text'
+	{ withNullableUtf8* `Maybe String'
+	, withNullableUtf8* `Maybe String'
+	, withNullableUtf8* `Maybe String'
+	, withNullableUtf8* `Maybe String'
+	, withNullableUtf8* `Maybe String'
+	, withNullableUtf8* `Maybe String'
 	, fromIntegral `Word32'
 	, alloca- `[NetworkPassword]' stealPasswordList*
 	} -> `Result' result #}
@@ -103,7 +102,7 @@ findNetworkPassword loc = let
 --
 -- Network passwords are items with the 'ItemType' 'ItemNetworkPassword'.
 setNetworkPassword :: Maybe KeyringName -> NetworkPasswordLocation ->
-                      Text ->
+                      String ->
                       Operation ItemID
 setNetworkPassword k loc secret = let
 	p1 = locationUser     loc
@@ -118,43 +117,43 @@ setNetworkPassword k loc secret = let
 		(set_network_password_sync k p1 p2 p3 p4 p5 p6 p7 secret)
 
 {# fun set_network_password
-	{ withNullableText* `Maybe Text'
-	, withNullableText* `Maybe Text'
-	, withNullableText* `Maybe Text'
-	, withNullableText* `Maybe Text'
-	, withNullableText* `Maybe Text'
-	, withNullableText* `Maybe Text'
-	, withNullableText* `Maybe Text'
+	{ withNullableUtf8* `Maybe String'
+	, withNullableUtf8* `Maybe String'
+	, withNullableUtf8* `Maybe String'
+	, withNullableUtf8* `Maybe String'
+	, withNullableUtf8* `Maybe String'
+	, withNullableUtf8* `Maybe String'
+	, withNullableUtf8* `Maybe String'
 	, fromIntegral `Word32'
-	, withText* `Text'
+	, withUtf8* `String'
 	, id `GetIntCallbackPtr'
 	, id `Ptr ()'
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
 {# fun set_network_password_sync
-	{ withNullableText* `Maybe Text'
-	, withNullableText* `Maybe Text'
-	, withNullableText* `Maybe Text'
-	, withNullableText* `Maybe Text'
-	, withNullableText* `Maybe Text'
-	, withNullableText* `Maybe Text'
-	, withNullableText* `Maybe Text'
+	{ withNullableUtf8* `Maybe String'
+	, withNullableUtf8* `Maybe String'
+	, withNullableUtf8* `Maybe String'
+	, withNullableUtf8* `Maybe String'
+	, withNullableUtf8* `Maybe String'
+	, withNullableUtf8* `Maybe String'
+	, withNullableUtf8* `Maybe String'
 	, fromIntegral `Word32'
-	, withText* `Text'
+	, withUtf8* `String'
 	, alloca- `ItemID' peekItemID*
 	} -> `Result' result #}
 
 peekPassword :: Ptr () -> IO NetworkPassword
 peekPassword pwd = do
 	-- Password location
-	protocol <- peekNullableText =<< {# get GnomeKeyringNetworkPasswordData->protocol #} pwd
-	server <- peekNullableText =<< {# get GnomeKeyringNetworkPasswordData->server #} pwd
-	object <- peekNullableText =<< {# get GnomeKeyringNetworkPasswordData->object #} pwd
-	authType <- peekNullableText =<< {# get GnomeKeyringNetworkPasswordData->authtype #} pwd
+	protocol <- peekNullableUtf8 =<< {# get GnomeKeyringNetworkPasswordData->protocol #} pwd
+	server <- peekNullableUtf8 =<< {# get GnomeKeyringNetworkPasswordData->server #} pwd
+	object <- peekNullableUtf8 =<< {# get GnomeKeyringNetworkPasswordData->object #} pwd
+	authType <- peekNullableUtf8 =<< {# get GnomeKeyringNetworkPasswordData->authtype #} pwd
 	port <- fromIntegral `fmap` {# get GnomeKeyringNetworkPasswordData->port #} pwd
-	user <- peekNullableText =<< {# get GnomeKeyringNetworkPasswordData->user #} pwd
-	domain <- peekNullableText =<< {# get GnomeKeyringNetworkPasswordData->domain #} pwd
+	user <- peekNullableUtf8 =<< {# get GnomeKeyringNetworkPasswordData->user #} pwd
+	domain <- peekNullableUtf8 =<< {# get GnomeKeyringNetworkPasswordData->domain #} pwd
 	let loc = NetworkPasswordLocation
 		{ locationProtocol = protocol
 		, locationServer   = server
@@ -166,9 +165,9 @@ peekPassword pwd = do
 		}
 	
 	-- Keyring, item, and secret
-	keyring <- peekText =<< {# get GnomeKeyringNetworkPasswordData->keyring #} pwd
+	keyring <- peekUtf8 =<< {# get GnomeKeyringNetworkPasswordData->keyring #} pwd
 	itemID <- (ItemID . fromIntegral) `fmap` {# get GnomeKeyringNetworkPasswordData->item_id #} pwd
-	password <- peekText =<< {# get GnomeKeyringNetworkPasswordData->password #} pwd
+	password <- peekUtf8 =<< {# get GnomeKeyringNetworkPasswordData->password #} pwd
 	return $ NetworkPassword keyring itemID loc password
 
 stealPasswordList :: Ptr (Ptr ()) -> IO [NetworkPassword]

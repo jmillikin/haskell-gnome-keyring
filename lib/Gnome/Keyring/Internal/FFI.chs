@@ -39,11 +39,11 @@ module Gnome.Keyring.Internal.FFI
 	
 	-- * Marshaling helpers
 	, cToUTC
-	, withText
-	, peekText
-	, withNullableText
-	, peekNullableText
-	, stealNullableText
+	, withUtf8
+	, peekUtf8
+	, withNullableUtf8
+	, peekNullableUtf8
+	, stealNullableUtf8
 	, mapGList
 	, mapGArray
 	
@@ -55,6 +55,7 @@ module Gnome.Keyring.Internal.FFI
 
 import           Control.Exception (bracket)
 import qualified Data.ByteString as ByteString
+import qualified Data.Text
 import           Data.Text (Text)
 import           Data.Text.Encoding (encodeUtf8, decodeUtf8)
 import           Data.Time (UTCTime)
@@ -69,9 +70,6 @@ import           Foreign.C
 cToUTC :: Integral a => a -> UTCTime
 cToUTC = posixSecondsToUTCTime . fromIntegral
 
-withText :: Text -> (CString -> IO a) -> IO a
-withText = ByteString.useAsCString . encodeUtf8
-
 peekText :: CString -> IO Text
 peekText cstr
 	| cstr == nullPtr = error "Gnome.Keyring.FFI.peekText nullPtr"
@@ -79,14 +77,20 @@ peekText cstr
 		bytes <- ByteString.packCString cstr
 		return (decodeUtf8 bytes)
 
-withNullableText :: Maybe Text -> (CString -> IO a) -> IO a
-withNullableText = maybeWith withText
+withUtf8 :: String -> (CString -> IO a) -> IO a
+withUtf8 = ByteString.useAsCString . encodeUtf8  . Data.Text.pack
 
-peekNullableText :: CString -> IO (Maybe Text)
-peekNullableText = maybePeek peekText
+peekUtf8 :: CString -> IO String
+peekUtf8 cstr = fmap Data.Text.unpack (peekText cstr)
 
-stealNullableText :: CString -> IO (Maybe Text)
-stealNullableText cstr = bracket (return cstr) free peekNullableText
+withNullableUtf8 :: Maybe String -> (CString -> IO a) -> IO a
+withNullableUtf8 = maybeWith withUtf8
+
+peekNullableUtf8 :: CString -> IO (Maybe String)
+peekNullableUtf8= maybePeek peekUtf8
+
+stealNullableUtf8 :: CString -> IO (Maybe String)
+stealNullableUtf8 cstr = bracket (return cstr) free peekNullableUtf8
 
 -- Convert GList to []
 mapGList :: (Ptr a -> IO b) -> Ptr () -> IO [b]

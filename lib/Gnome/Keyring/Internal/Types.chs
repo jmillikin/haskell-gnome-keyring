@@ -26,13 +26,12 @@ module Gnome.Keyring.Internal.Types
 	) where
 
 import           Control.Exception (Exception)
-import           Data.Text (Text, pack)
 import           Data.Typeable (Typeable)
 import           Foreign (Ptr)
 
 #include <gnome-keyring.h>
 
-type KeyringName = Text
+type KeyringName = String
 
 newtype CancellationKey = CancellationKey (Ptr ())
 
@@ -46,7 +45,7 @@ data Error
 	| ErrorCancelled
 	| ErrorKeyringAlreadyExists
 	| ErrorNoMatch
-	| ErrorUnknown Text
+	| ErrorUnknown String
 	deriving (Show, Eq, Typeable)
 
 newtype KeyringException = KeyringException Error
@@ -68,7 +67,7 @@ resultToError RESULT_IO_ERROR = ErrorIOError
 resultToError RESULT_CANCELLED = ErrorCancelled
 resultToError RESULT_KEYRING_ALREADY_EXISTS = ErrorKeyringAlreadyExists
 resultToError RESULT_NO_MATCH = ErrorNoMatch
-resultToError x = ErrorUnknown (pack (show x))
+resultToError x = ErrorUnknown (show x)
 
 result :: Integral a => a -> Result
 result = toEnum . fromIntegral

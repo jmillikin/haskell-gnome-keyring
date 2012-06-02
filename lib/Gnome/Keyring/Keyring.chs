@@ -33,7 +33,6 @@ module Gnome.Keyring.Keyring
 	) where
 
 import           Control.Exception (bracket)
-import           Data.Text (Text)
 
 import           Gnome.Keyring.Item (findItems) -- for docs
 import           Gnome.Keyring.ItemInfo
@@ -48,7 +47,7 @@ import           Gnome.Keyring.Internal.Types
 -- | Get the default keyring name. If no default keyring exists, then
 -- 'Nothing' will be returned.
 getDefaultKeyring :: Operation (Maybe KeyringName)
-getDefaultKeyring = maybeTextOperation
+getDefaultKeyring = maybeStringOperation
 	get_default_keyring
 	get_default_keyring_sync
 
@@ -59,11 +58,11 @@ getDefaultKeyring = maybeTextOperation
 	} -> `CancellationKey' CancellationKey #}
 
 {# fun get_default_keyring_sync
-	{ alloca- `Maybe Text' stealNullableTextPtr*
+	{ alloca- `Maybe String' stealNullableUtf8Ptr*
 	} -> `Result' result #}
 
-stealNullableTextPtr :: Ptr CString -> IO (Maybe Text)
-stealNullableTextPtr ptr = bracket (peek ptr) free peekNullableText
+stealNullableUtf8Ptr :: Ptr CString -> IO (Maybe String)
+stealNullableUtf8Ptr ptr = bracket (peek ptr) free peekNullableUtf8
 
 -- | Change the default keyring.
 setDefaultKeyring :: KeyringName -> Operation ()
@@ -72,20 +71,20 @@ setDefaultKeyring k = voidOperation
 	(set_default_keyring_sync k)
 
 {# fun set_default_keyring
-	{ withText* `Text'
+	{ withUtf8* `String'
 	, id `DoneCallbackPtr'
 	, id `Ptr ()'
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
 {# fun set_default_keyring_sync
-	{ withText* `Text'
+	{ withUtf8* `String'
 	} -> `(Result, ())' resultAndTuple #}
 
 -- | Get a list of keyring names. If no keyrings exist, an empty list
 -- will be returned.
 listKeyringNames :: Operation [KeyringName]
-listKeyringNames = textListOperation
+listKeyringNames = stringListOperation
 	list_keyring_names
 	list_keyring_names_sync
 
@@ -96,31 +95,31 @@ listKeyringNames = textListOperation
 	} -> `CancellationKey' CancellationKey #}
 
 {# fun list_keyring_names_sync
-	{ alloca- `[Text]' stealTextList*
+	{ alloca- `[String]' stealUtf8List*
 	} -> `Result' result #}
 
-stealTextList :: Ptr (Ptr ()) -> IO [Text]
-stealTextList ptr = bracket (peek ptr)
+stealUtf8List :: Ptr (Ptr ()) -> IO [String]
+stealUtf8List ptr = bracket (peek ptr)
 	{# call gnome_keyring_string_list_free #}
-	(mapGList peekText)
+	(mapGList peekUtf8)
 
 -- | Create a new keyring with the specified name. In most cases, 'Nothing'
 -- will be passed as the password, which will prompt the user to enter a
 -- password of their choice.
-create :: KeyringName -> Maybe Text -> Operation ()
+create :: KeyringName -> Maybe String -> Operation ()
 create k p = voidOperation (c_create k p) (create_sync k p)
 
 {# fun create as c_create
-	{ withText* `Text'
-	, withNullableText* `Maybe Text'
+	{ withUtf8* `String'
+	, withNullableUtf8* `Maybe String'
 	, id `DoneCallbackPtr'
 	, id `Ptr ()'
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
 {# fun create_sync
-	{ withText* `Text'
-	, withNullableText* `Maybe Text'
+	{ withUtf8* `String'
+	, withNullableUtf8* `Maybe String'
 	} -> `(Result, ())' resultAndTuple #}
 
 -- | Delete a keyring. Once a keyring is deleted, there is no mechanism for
@@ -129,14 +128,14 @@ delete :: KeyringName -> Operation ()
 delete k = voidOperation (c_delete k) (delete_sync k)
 
 {# fun delete as c_delete
-	{ withText* `Text'
+	{ withUtf8* `String'
 	, id `DoneCallbackPtr'
 	, id `Ptr ()'
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
 {# fun delete_sync
-	{ withText* `Text'
+	{ withUtf8* `String'
 	} -> `(Result, ())' resultAndTuple #}
 
 -- | Lock a keyring, so that its contents may not be accessed without first
@@ -148,14 +147,14 @@ lock :: Maybe KeyringName -> Operation ()
 lock k = voidOperation (c_lock k) (lock_sync k)
 
 {# fun lock as c_lock
-	{ withNullableText* `Maybe Text'
+	{ withNullableUtf8* `Maybe String'
 	, id `DoneCallbackPtr'
 	, id `Ptr ()'
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
 {# fun lock_sync
-	{ withNullableText* `Maybe Text'
+	{ withNullableUtf8* `Maybe String'
 	} -> `(Result, ())' resultAndTuple #}
 
 -- | Lock all the keyrings, so that their contents may not be accessed
@@ -178,20 +177,20 @@ lockAll = voidOperation lock_all lock_all_sync
 --
 -- Most keyring operations involving items require that the keyring first be
 -- unlocked. One exception is 'findItems' and related computations.
-unlock :: Maybe KeyringName -> Maybe Text -> Operation ()
+unlock :: Maybe KeyringName -> Maybe String -> Operation ()
 unlock k p = voidOperation (c_unlock k p) (unlock_sync k p)
 
 {# fun unlock as c_unlock
-	{ withNullableText* `Maybe Text'
-	, withNullableText* `Maybe Text'
+	{ withNullableUtf8* `Maybe String'
+	, withNullableUtf8* `Maybe String'
 	, id `DoneCallbackPtr'
 	, id `Ptr ()'
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
 {# fun unlock_sync
-	{ withNullableText* `Maybe Text'
-	, withNullableText* `Maybe Text'
+	{ withNullableUtf8* `Maybe String'
+	, withNullableUtf8* `Maybe String'
 	} -> `(Result, ())' resultAndTuple #}
 
 -- | Get information about the keyring.
@@ -199,14 +198,14 @@ getInfo :: Maybe KeyringName -> Operation KeyringInfo
 getInfo k = keyringInfoOperation (get_info k) (get_info_sync k)
 
 {# fun get_info
-	{ withNullableText* `Maybe Text'
+	{ withNullableUtf8* `Maybe String'
 	, id `GetKeyringInfoCallbackPtr'
 	, id `Ptr ()'
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
 {# fun get_info_sync
-	{ withNullableText* `Maybe Text'
+	{ withNullableUtf8* `Maybe String'
 	, alloca- `KeyringInfo' stealKeyringInfoPtr*
 	} -> `Result' result #}
 
@@ -219,7 +218,7 @@ setInfo k info = voidOperation
 	(set_info_sync k info)
 
 {# fun set_info
-	{ withNullableText* `Maybe Text'
+	{ withNullableUtf8* `Maybe String'
 	, withKeyringInfo* `KeyringInfo'
 	, id `DoneCallbackPtr'
 	, id `Ptr ()'
@@ -227,7 +226,7 @@ setInfo k info = voidOperation
 	} -> `CancellationKey' CancellationKey #}
 
 {# fun set_info_sync
-	{ withNullableText* `Maybe Text'
+	{ withNullableUtf8* `Maybe String'
 	, withKeyringInfo* `KeyringInfo'
 	} -> `(Result, ())' resultAndTuple #}
 
@@ -235,26 +234,26 @@ setInfo k info = voidOperation
 -- be specified for both the original and new passwords to allow the user
 -- to type both.
 changePassword :: KeyringName
-               -> Maybe Text -- ^ Old password
-               -> Maybe Text -- ^ New password
+               -> Maybe String -- ^ Old password
+               -> Maybe String -- ^ New password
                -> Operation ()
 changePassword k op np = voidOperation
 	(change_password k op np)
 	(change_password_sync k op np)
 
 {# fun change_password
-	{ withText* `Text'
-	, withNullableText* `Maybe Text'
-	, withNullableText* `Maybe Text'
+	{ withUtf8* `String'
+	, withNullableUtf8* `Maybe String'
+	, withNullableUtf8* `Maybe String'
 	, id `DoneCallbackPtr'
 	, id `Ptr ()'
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
 {# fun change_password_sync
-	{ withText* `Text'
-	, withNullableText* `Maybe Text'
-	, withNullableText* `Maybe Text'
+	{ withUtf8* `String'
+	, withNullableUtf8* `Maybe String'
+	, withNullableUtf8* `Maybe String'
 	} -> `(Result, ())' resultAndTuple #}
 
 -- | Get a list of all the IDs for items in the keyring. All items which are
@@ -266,13 +265,13 @@ listItemIDs name = itemIDListOperation
 	(list_item_ids_sync name)
 
 {# fun list_item_ids
-	{ withNullableText* `Maybe Text'
+	{ withNullableUtf8* `Maybe String'
 	, id `GetListCallbackPtr'
 	, id `Ptr ()'
 	, id `DestroyNotifyPtr'
 	} -> `CancellationKey' CancellationKey #}
 
 {# fun list_item_ids_sync
-	{ withNullableText* `Maybe Text'
+	{ withNullableUtf8* `Maybe String'
 	, alloca- `[ItemID]' stealItemIDList*
 	} -> `Result' result #}

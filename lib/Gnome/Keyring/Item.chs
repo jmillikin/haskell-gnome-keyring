@@ -44,7 +44,6 @@ module Gnome.Keyring.Item
 
 import           Control.Exception (bracket)
 import           Data.Set (Set, toList, fromList)
-import           Data.Text (Text)
 
 import           Gnome.Keyring.ItemInfo
 import           Gnome.Keyring.Internal.FFI
@@ -79,9 +78,9 @@ cItemInfoFlags = foldr (.|.) 0 . map flagValue . toList where
 -- Whether a new item is created or not, the ID of the item will be returned.
 itemCreate :: Maybe KeyringName
            -> ItemType
-           -> Text -- ^ Display name
+           -> String -- ^ Display name
            -> [Attribute]
-           -> Text -- ^ The secret
+           -> String -- ^ The secret
            -> Bool -- ^ Update an existing item, if one exists.
            -> Operation ItemID
 itemCreate k t dn as s u = itemIDOperation
@@ -89,11 +88,11 @@ itemCreate k t dn as s u = itemIDOperation
 	(item_create_sync k t dn as s u)
 
 {# fun item_create
-	{ withNullableText* `Maybe Text'
+	{ withNullableUtf8* `Maybe String'
 	, fromItemType `ItemType'
-	, withText* `Text'
+	, withUtf8* `String'
 	, withAttributeList* `[Attribute]'
-	, withText* `Text'
+	, withUtf8* `String'
 	, fromBool `Bool'
 	, id `GetIntCallbackPtr'
 	, id `Ptr ()'
@@ -101,11 +100,11 @@ itemCreate k t dn as s u = itemIDOperation
 	} -> `CancellationKey' CancellationKey #}
 
 {# fun item_create_sync
-	{ withNullableText* `Maybe Text'
+	{ withNullableUtf8* `Maybe String'
 	, fromItemType `ItemType'
-	, withText* `Text'
+	, withUtf8* `String'
 	, withAttributeList* `[Attribute]'
-	, withText* `Text'
+	, withUtf8* `String'
 	, fromBool `Bool'
 	, alloca- `ItemID' peekItemID*
 	} -> `Result' result #}
@@ -120,7 +119,7 @@ itemDelete k item = voidOperation
 	(item_delete_sync k item)
 
 {# fun item_delete
-	{ withNullableText* `Maybe Text'
+	{ withNullableUtf8* `Maybe String'
 	, cItemID `ItemID'
 	, id `DoneCallbackPtr'
 	, id `Ptr ()'
@@ -128,7 +127,7 @@ itemDelete k item = voidOperation
 	} -> `CancellationKey' CancellationKey #}
 
 {# fun item_delete_sync
-	{ withNullableText* `Maybe Text'
+	{ withNullableUtf8* `Maybe String'
 	, cItemID `ItemID'
 	} -> `(Result, ())' resultAndTuple #}
 
@@ -142,7 +141,7 @@ itemGetInfo k item = itemInfoOperation
 	(item_get_info_sync k item)
 
 {# fun item_get_info
-	{ withNullableText* `Maybe Text'
+	{ withNullableUtf8* `Maybe String'
 	, cItemID `ItemID'
 	, id `GetItemInfoCallbackPtr'
 	, id `Ptr ()'
@@ -150,7 +149,7 @@ itemGetInfo k item = itemInfoOperation
 	} -> `CancellationKey' CancellationKey #}
 
 {# fun item_get_info_sync
-	{ withNullableText* `Maybe Text'
+	{ withNullableUtf8* `Maybe String'
 	, cItemID `ItemID'
 	, alloca- `ItemInfo' stealItemInfo*
 	} -> `Result' result #}
@@ -167,7 +166,7 @@ itemGetInfoFull k item flags = itemInfoOperation
 	(item_get_info_full_sync k item flags)
 
 {# fun item_get_info_full
-	{ withNullableText* `Maybe Text'
+	{ withNullableUtf8* `Maybe String'
 	, cItemID `ItemID'
 	, cItemInfoFlags `Set ItemInfoFlag'
 	, id `GetItemInfoCallbackPtr'
@@ -176,7 +175,7 @@ itemGetInfoFull k item flags = itemInfoOperation
 	} -> `CancellationKey' CancellationKey #}
 
 {# fun item_get_info_full_sync
-	{ withNullableText* `Maybe Text'
+	{ withNullableUtf8* `Maybe String'
 	, cItemID `ItemID'
 	, cItemInfoFlags `Set ItemInfoFlag'
 	, alloca- `ItemInfo' stealItemInfo*
@@ -192,7 +191,7 @@ itemSetInfo k item info = voidOperation
 	(item_set_info_sync k item info)
 
 {# fun item_set_info
-	{ withNullableText* `Maybe Text'
+	{ withNullableUtf8* `Maybe String'
 	, cItemID `ItemID'
 	, withItemInfo* `ItemInfo'
 	, id `DoneCallbackPtr'
@@ -201,7 +200,7 @@ itemSetInfo k item info = voidOperation
 	} -> `CancellationKey' CancellationKey #}
 
 {# fun item_set_info_sync
-	{ withNullableText* `Maybe Text'
+	{ withNullableUtf8* `Maybe String'
 	, cItemID `ItemID'
 	, withItemInfo* `ItemInfo'
 	} -> `(Result, ())' resultAndTuple #}
@@ -209,11 +208,11 @@ itemSetInfo k item info = voidOperation
 {# enum GnomeKeyringAttributeType as AttributeType {} #}
 
 data Attribute
-	= TextAttribute Text Text
-	| WordAttribute Text Word32
+	= TextAttribute String String
+	| WordAttribute String Word32
 	deriving (Show, Eq)
 
-attributeName :: Attribute -> Text
+attributeName :: Attribute -> String
 attributeName (TextAttribute n _) = n
 attributeName (WordAttribute n _) = n
 
@@ -226,24 +225,24 @@ withAttributeList attrs io = bracket newList freeAttributeList buildList where
 
 {# fun attribute_list_append_string as appendString
 	{ id `Ptr ()'
-	, withText* `Text'
-	, withText* `Text'
+	, withUtf8* `String'
+	, withUtf8* `String'
 	} -> `()' id #}
 
 {# fun attribute_list_append_uint32 as appendUInt32
 	{ id `Ptr ()'
-	, withText* `Text'
+	, withUtf8* `String'
 	, fromIntegral `Word32'
 	} -> `()' id #}
 
 peekAttribute :: Ptr () -> IO Attribute
 peekAttribute attr = do
-	name <- peekText =<< {# get GnomeKeyringAttribute->name #} attr
+	name <- peekUtf8 =<< {# get GnomeKeyringAttribute->name #} attr
 	cType <- {# get GnomeKeyringAttribute->type #} attr
 	case toEnum . fromIntegral $ cType of
 		ATTRIBUTE_TYPE_STRING -> do
-			value <- peekText =<< {# get GnomeKeyringAttribute.value.string #} attr
-			return $ TextAttribute name value
+			value <- peekUtf8 =<< {# get GnomeKeyringAttribute.value.string #} attr
+			return (TextAttribute name value)
 		ATTRIBUTE_TYPE_UINT32 -> do
 			cValue <- {# get GnomeKeyringAttribute.value.integer #} attr
 			return $ WordAttribute name $ fromIntegral cValue
@@ -274,7 +273,7 @@ itemGetAttributes k item = attributeListOperation
 	(item_get_attributes_sync k item)
 
 {# fun item_get_attributes
-	{ withNullableText* `Maybe Text'
+	{ withNullableUtf8* `Maybe String'
 	, cItemID `ItemID'
 	, id `GetAttributesCallbackPtr'
 	, id `Ptr ()'
@@ -282,7 +281,7 @@ itemGetAttributes k item = attributeListOperation
 	} -> `CancellationKey' CancellationKey #}
 
 {# fun item_get_attributes_sync
-	{ withNullableText* `Maybe Text'
+	{ withNullableUtf8* `Maybe String'
 	, cItemID `ItemID'
 	, alloca- `[Attribute]' stealAttributeList*
 	} -> `Result' result #}
@@ -295,7 +294,7 @@ itemSetAttributes k item as = voidOperation
 	(item_set_attributes_sync k item as)
 
 {# fun item_set_attributes
-	{ withNullableText* `Maybe Text'
+	{ withNullableUtf8* `Maybe String'
 	, cItemID `ItemID'
 	, withAttributeList* `[Attribute]'
 	, id `DoneCallbackPtr'
@@ -304,7 +303,7 @@ itemSetAttributes k item as = voidOperation
 	} -> `CancellationKey' CancellationKey #}
 
 {# fun item_set_attributes_sync
-	{ withNullableText* `Maybe Text'
+	{ withNullableUtf8* `Maybe String'
 	, cItemID `ItemID'
 	, withAttributeList* `[Attribute]'
 	} -> `(Result, ())' resultAndTuple #}
@@ -318,16 +317,16 @@ data AccessType
 	deriving (Show, Eq, Ord)
 
 data AccessControl = AccessControl
-	{ accessControlName :: Maybe Text
-	, accessControlPath :: Maybe Text
+	{ accessControlName :: Maybe String
+	, accessControlPath :: Maybe String
 	, accessControlType :: Set AccessType
 	}
 	deriving (Show, Eq)
 
 peekAccessControl :: Ptr () -> IO AccessControl
 peekAccessControl ac = do
-	name <- stealNullableText =<< {# call item_ac_get_display_name #} ac
-	path <- stealNullableText =<< {# call item_ac_get_path_name #} ac
+	name <- stealNullableUtf8 =<< {# call item_ac_get_display_name #} ac
+	path <- stealNullableUtf8 =<< {# call item_ac_get_path_name #} ac
 	cType <- {# call item_ac_get_access_type #} ac
 	return $ AccessControl name path $ peekAccessType cType
 
@@ -353,8 +352,8 @@ buildAC :: Ptr () -> AccessControl -> IO (Ptr ())
 buildAC appRef ac = do
 	let cAllowed = cAccessTypes $ accessControlType ac
 	ptr <- {# call access_control_new #} appRef cAllowed
-	withNullableText (accessControlName ac) $ {# call item_ac_set_display_name #} ptr
-	withNullableText (accessControlPath ac) $ {# call item_ac_set_path_name #} ptr
+	withNullableUtf8 (accessControlName ac) $ {# call item_ac_set_display_name #} ptr
+	withNullableUtf8 (accessControlPath ac) $ {# call item_ac_set_path_name #} ptr
 	return ptr
 
 freeACL :: Ptr () -> IO ()
@@ -388,7 +387,7 @@ itemGetACL k item = accessControlListOperation
 	(item_get_acl_sync k item)
 
 {# fun item_get_acl
-	{ withNullableText* `Maybe Text'
+	{ withNullableUtf8* `Maybe String'
 	, cItemID `ItemID'
 	, id `GetListCallbackPtr'
 	, id `Ptr ()'
@@ -396,7 +395,7 @@ itemGetACL k item = accessControlListOperation
 	} -> `CancellationKey' CancellationKey #}
 
 {# fun item_get_acl_sync
-	{ withNullableText* `Maybe Text'
+	{ withNullableUtf8* `Maybe String'
 	, cItemID `ItemID'
 	, alloca- `[AccessControl]' stealACL*
 	} -> `Result' result #}
@@ -409,7 +408,7 @@ itemSetACL k item acl = voidOperation
 	(item_set_acl_sync k item acl)
 
 {# fun item_set_acl
-	{ withNullableText* `Maybe Text'
+	{ withNullableUtf8* `Maybe String'
 	, cItemID `ItemID'
 	, withACL* `[AccessControl]'
 	, id `DoneCallbackPtr'
@@ -418,7 +417,7 @@ itemSetACL k item acl = voidOperation
 	} -> `CancellationKey' CancellationKey #}
 
 {# fun item_set_acl_sync
-	{ withNullableText* `Maybe Text'
+	{ withNullableUtf8* `Maybe String'
 	, cItemID `ItemID'
 	, withACL* `[AccessControl]'
 	} -> `(Result, ())' resultAndTuple #}
@@ -429,8 +428,8 @@ itemSetACL k item acl = voidOperation
 -- This is similar to performing 'itemGetACL' and 'itemSetACL' with
 -- appropriate parameters.
 itemGrantAccessRights :: Maybe KeyringName
-                      -> Text -- ^ Display name
-                      -> Text -- ^ Application executable path
+                      -> String -- ^ Display name
+                      -> String -- ^ Application executable path
                       -> ItemID
                       -> Set AccessType
                       -> Operation ()
@@ -439,9 +438,9 @@ itemGrantAccessRights k d p item r = voidOperation
 	(item_grant_access_rights_sync k d p item r)
 
 {# fun item_grant_access_rights
-	{ withNullableText* `Maybe Text'
-	, withText* `Text'
-	, withText* `Text'
+	{ withNullableUtf8* `Maybe String'
+	, withUtf8* `String'
+	, withUtf8* `String'
 	, cItemID `ItemID'
 	, cAccessTypes `Set AccessType'
 	, id `DoneCallbackPtr'
@@ -450,9 +449,9 @@ itemGrantAccessRights k d p item r = voidOperation
 	} -> `CancellationKey' CancellationKey #}
 
 {# fun item_grant_access_rights_sync
-	{ withNullableText* `Maybe Text'
-	, withText* `Text'
-	, withText* `Text'
+	{ withNullableUtf8* `Maybe String'
+	, withUtf8* `String'
+	, withUtf8* `String'
 	, cItemID `ItemID'
 	, cAccessTypes `Set AccessType'
 	} -> `(Result, ())' resultAndTuple #}
@@ -461,16 +460,16 @@ data FoundItem = FoundItem
 	{ foundItemKeyring    :: KeyringName
 	, foundItemID         :: ItemID
 	, foundItemAttributes :: [Attribute]
-	, foundItemSecret     :: Text
+	, foundItemSecret     :: String
 	}
 	deriving (Show, Eq)
 
 peekFound :: Ptr () -> IO FoundItem
 peekFound f = do
-	keyring <- peekText =<< {# get GnomeKeyringFound->keyring #} f
+	keyring <- peekUtf8 =<< {# get GnomeKeyringFound->keyring #} f
 	itemID <- {# get GnomeKeyringFound->item_id #} f
 	attrs <- peekAttributeList =<< {# get GnomeKeyringFound->attributes #} f
-	secret <- peekText =<< {# get GnomeKeyringFound->secret #} f
+	secret <- peekUtf8 =<< {# get GnomeKeyringFound->secret #} f
 	let itemID' = ItemID $ fromIntegral itemID
 	return $ FoundItem keyring itemID' attrs secret
 

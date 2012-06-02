@@ -25,13 +25,12 @@ module Gnome.Keyring.Internal.Operation
 	, OperationImpl
 	, operationImpl
 	, voidOperation
-	, maybeTextOperation
-	, textListOperation
+	, maybeStringOperation
+	, stringListOperation
 	) where
 
 import           Control.Exception (throwIO)
 import           Control.Monad (join)
-import           Data.Text (Text)
 
 import           Gnome.Keyring.Internal.FFI
 import           Gnome.Keyring.Internal.Types
@@ -87,12 +86,12 @@ voidOperation = operationImpl $ \checkResult ->
 	wrapDoneCallback $ \cres _ ->
 	checkResult cres $ return ()
 
-maybeTextOperation :: OperationImpl GetStringCallback (Maybe Text)
-maybeTextOperation = operationImpl $ \checkResult ->
+maybeStringOperation :: OperationImpl GetStringCallback (Maybe String)
+maybeStringOperation = operationImpl $ \checkResult ->
 	wrapGetStringCallback $ \cres cstr _ ->
-	checkResult cres $ peekNullableText cstr
+	checkResult cres (peekNullableUtf8 cstr)
 
-textListOperation :: OperationImpl GetListCallback [Text]
-textListOperation = operationImpl $ \checkResult ->
+stringListOperation :: OperationImpl GetListCallback [String]
+stringListOperation = operationImpl $ \checkResult ->
 	wrapGetListCallback $ \cres list _ ->
-	checkResult cres $ mapGList peekText list
+	checkResult cres (mapGList peekUtf8 list)
