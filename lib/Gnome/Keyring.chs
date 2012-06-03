@@ -1041,6 +1041,8 @@ data NetworkPasswordLocation = NetworkPasswordLocation
 -- prompted for access to the items if needed.
 --
 -- Network passwords are items with the 'ItemType' 'ItemNetworkPassword'.
+--
+-- Returns an empty list if no items were found.
 findNetworkPassword :: NetworkPasswordLocation -> Operation [NetworkPassword]
 findNetworkPassword loc = let
 	p1 = locationUser     loc
@@ -1052,7 +1054,17 @@ findNetworkPassword loc = let
 	p7 = locationPort     loc
 	in passwordListOperation
 		(find_network_password p1 p2 p3 p4 p5 p6 p7)
-		(find_network_password_sync p1 p2 p3 p4 p5 p6 p7)
+		(do
+			(rc, lst) <- find_network_password_sync p1 p2 p3 p4 p5 p6 p7
+			return $ if rc == Result 9
+				then (Result 0, [])
+				else (rc, lst))
+
+passwordListOperation :: OperationImpl GetListCallback [NetworkPassword]
+passwordListOperation = operationImpl $ \checkResult ->
+	wrapGetListCallback $ \cres list _ -> if cres == 9
+		then checkResult 0 (return [])
+		else checkResult cres (mapGList peekPassword list)
 
 {# fun find_network_password
 	{ withNullableUtf8* `Maybe String'
@@ -1159,11 +1171,6 @@ stealPasswordList :: Ptr (Ptr ()) -> IO [NetworkPassword]
 stealPasswordList ptr = bracket (peek ptr)
 	{# call network_password_list_free #}
 	(mapGList peekPassword)
-
-passwordListOperation :: OperationImpl GetListCallback [NetworkPassword]
-passwordListOperation = operationImpl $ \checkResult ->
-	wrapGetListCallback $ \cres list _ ->
-	checkResult cres (mapGList peekPassword list)
 
 data Operation a = Operation
 	{ async    :: (KeyringError -> IO ()) -> (a -> IO ()) -> IO CancellationKey
@@ -1355,6 +1362,7 @@ newtype KeyringException = KeyringException KeyringError
 instance Exception KeyringException
 
 newtype Result = Result CInt
+	deriving (Eq)
 
 resultAndTuple :: CInt -> (Result, ())
 resultAndTuple x = (Result x, ())
