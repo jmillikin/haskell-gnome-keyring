@@ -665,18 +665,25 @@ stealFoundList ptr = bracket (peek ptr)
 
 foundItemsOperation :: OperationImpl GetListCallback [FoundItem]
 foundItemsOperation = operationImpl $ \checkResult ->
-	wrapGetListCallback $ \cres list _ ->
-	checkResult cres ((mapGList peekFound) list)
+	wrapGetListCallback $ \cres list _ -> if cres == 9
+		then checkResult 0 (return [])
+		else checkResult cres ((mapGList peekFound) list)
 
 -- | Searches through all keyrings for items that match the attributes. The
 -- matches are for exact equality.
 --
 -- The user may be prompted to unlock necessary keyrings, and will be
 -- prompted for access to the items if needed.
+--
+-- Returns an empty list if no items were found.
 findItems :: ItemType -> [Attribute] -> Operation [FoundItem]
 findItems t as = foundItemsOperation
 	(find_items t as)
-	(find_items_sync t as)
+	(do
+		(rc, lst) <- find_items_sync t as
+		return $ if rc == Result 9
+			then (Result 0, [])
+			else (rc, lst))
 
 {# fun find_items
 	{ fromItemType `ItemType'
