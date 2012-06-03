@@ -34,13 +34,14 @@ module Gnome.Keyring
 	-- $item-doc
 	, ItemID
 	, ItemType(..)
-	, itemCreate
-	, itemDelete
-	, getItemInfo
-	, setItemInfo
+	, createItem
+	, deleteItem
+	, listItemIDs
 	
 	-- ** Item info
-	, ItemInfo
+	, Item
+	, getItem
+	, setItem
 	, itemType
 	, itemSecret
 	, itemDisplayName
@@ -51,16 +52,16 @@ module Gnome.Keyring
 	-- $attribute-doc
 	, Attribute (..)
 	, attributeName
-	, itemGetAttributes
-	, itemSetAttributes
+	, getItemAttributes
+	, setItemAttributes
 	
 	-- ** Access control
 	-- $access-control-doc
-	, AccessControl (..)
+	, Access (..)
 	, AccessType (..)
-	, itemGetACL
-	, itemSetACL
-	, itemGrantAccessRights
+	, getItemAccess
+	, setItemAccess
+	, grantItemAccess
 	
 	-- ** Searching for items
 	, FoundItem
@@ -71,7 +72,6 @@ module Gnome.Keyring
 	, findItems
 	
 	-- * Keyrings
-	-- $keyring-doc
 	, Keyring
 	, defaultKeyring
 	, sessionKeyring
@@ -83,19 +83,22 @@ module Gnome.Keyring
 	, listKeyringNames
 	, createKeyring
 	, deleteKeyring
-	, changePassword
-	, listItemIDs
+	, changeKeyringPassword
 	
-	-- ** Locking and unlocking
+	-- ** Locking and unlocking keyrings
 	, lockKeyring
-	, lockAll
 	, unlockKeyring
+	, lockAll
 	
 	-- ** Keyring information
-	, KeyringInfo (..)
-	, KeyringInfoToken
-	, getInfo
-	, setInfo
+	, KeyringInfo
+	, keyringLockOnIdle
+	, keyringLockTimeout
+	, keyringModified
+	, keyringCreated
+	, keyringIsLocked
+	, getKeyringInfo
+	, setKeyringInfo
 	
 	-- * Network passwords
 	-- $network-password-doc
@@ -145,7 +148,7 @@ import           Data.Text.Encoding (encodeUtf8, decodeUtf8)
 -- exists. An item's name is for displaying to the user. Each item has a
 -- single secret, which is Unicode text. This secret is stored in
 -- non-pageable memory in the server, and encrypted on disk. All of this
--- information is exposed via 'ItemInfo' values.
+-- information is exposed via 'Item' values.
 --
 -- Note that the underlying C library stores secrets in non-pageable memory,
 -- but the Haskell bindings currently do not.
@@ -170,19 +173,29 @@ data ItemType
 	| ItemPublicKeyStorage
 	deriving (Show, Eq)
 
-data ItemInfo = ItemInfo
-	{ itemType :: ItemType
+data Item = Item
+	{
+	
+	-- | Get or set the item's type.
+	  itemType :: ItemType
+	
+	-- | Get or set the item's secret.
 	, itemSecret :: Maybe String
+	
+	-- | Get or set the item's display name.
 	, itemDisplayName :: Maybe String
+	
 	, itemMTime :: UTCTime
 	, itemCTime :: UTCTime
 	}
 	deriving (Show, Eq)
 
-itemModified :: ItemInfo -> UTCTime
+-- | Get when the item was last modified.
+itemModified :: Item -> UTCTime
 itemModified = itemMTime
 
-itemCreated :: ItemInfo -> UTCTime
+-- | Get when the item was created.
+itemCreated :: Item -> UTCTime
 itemCreated = itemCTime
 
 fromItemType :: ItemType -> CInt
@@ -202,16 +215,16 @@ toItemType 4 = ItemEncryptionKeyPassword
 toItemType 0x100 = ItemPublicKeyStorage
 toItemType _ = ItemGenericSecret
 
-peekItemInfo :: Ptr () -> IO ItemInfo
+peekItemInfo :: Ptr () -> IO Item
 peekItemInfo info = do
 	cType <- {# call item_info_get_type #} info
 	secret <- stealNullableUtf8 =<< {# call item_info_get_secret #} info
 	name <- stealNullableUtf8 =<< {# call item_info_get_display_name #} info
 	mtime <- cToUTC `fmap` {# call item_info_get_mtime #} info
 	ctime <- cToUTC `fmap` {# call item_info_get_ctime #} info
-	return (ItemInfo (toItemType cType) secret name mtime ctime)
+	return (Item (toItemType cType) secret name mtime ctime)
 
-stealItemInfo :: Ptr (Ptr ()) -> IO ItemInfo
+stealItemInfo :: Ptr (Ptr ()) -> IO Item
 stealItemInfo ptr = bracket (peek ptr) freeItemInfo peekItemInfo
 
 freeItemInfo :: Ptr () -> IO ()
@@ -220,7 +233,7 @@ freeItemInfo = {# call item_info_free #}
 foreign import ccall "gnome-keyring.h &gnome_keyring_item_info_free"
 	finalizeItemInfo :: FunPtr (Ptr a -> IO ())
 
-withItemInfo :: ItemInfo -> (Ptr () -> IO a) -> IO a
+withItemInfo :: Item -> (Ptr () -> IO a) -> IO a
 withItemInfo info io = do
 	fptr <- newForeignPtr finalizeItemInfo =<< {# call item_info_new #}
 	withForeignPtr fptr $ \ptr -> do
@@ -228,18 +241,6 @@ withItemInfo info io = do
 	withNullableUtf8 (itemSecret info) ({# call item_info_set_secret #} ptr)
 	withNullableUtf8 (itemDisplayName info) ({# call item_info_set_display_name #} ptr)
 	io ptr
-
-itemIDListOperation :: OperationImpl GetListCallback [ItemID]
-itemIDListOperation = operationImpl $ \checkResult ->
-	wrapGetListCallback $ \cres ptr _ ->
-	checkResult cres (peekItemIDList ptr)
-
-peekItemIDList :: Ptr () -> IO [ItemID]
-peekItemIDList = mapGList (return . ItemID . fromIntegral . ptrToWordPtr)
-
-stealItemIDList :: Ptr (Ptr ()) -> IO [ItemID]
-stealItemIDList ptr = bracket (peek ptr) freeList peekItemIDList where
-	freeList = {# call g_list_free #}
 
 type GetItemInfoCallback = CInt -> Ptr () -> Ptr () -> IO ()
 {# pointer GnomeKeyringOperationGetItemInfoCallback as GetItemInfoCallbackPtr #}
@@ -251,7 +252,7 @@ itemIDOperation = operationImpl $ \checkResult ->
 	wrapGetIntCallback $ \cres cint _ ->
 	checkResult cres (return (ItemID cint))
 
-itemInfoOperation :: OperationImpl GetItemInfoCallback ItemInfo
+itemInfoOperation :: OperationImpl GetItemInfoCallback Item
 itemInfoOperation = operationImpl $ \checkResult ->
 	wrapGetItemInfoCallback $ \cres ptr _ ->
 	checkResult cres (peekItemInfo ptr)
@@ -264,22 +265,22 @@ cItemID (ItemID x) = x
 
 -- | Create a new item in a keyring.
 --
--- The user may have been prompted to unlock necessary keyrings. If 'Nothing'
--- is specified as the keyring and no default keyring exists, the user will
--- be prompted to create a new keyring.
+-- The user may have been prompted to unlock necessary keyrings. If
+-- 'defaultKeyring' is specified as the keyring and no default keyring exists,
+-- the user will be prompted to create a new keyring.
 --
 -- If an existing item should be updated, the user may be prompted for access
 -- to the existing item.
 --
 -- Whether a new item is created or not, the ID of the item will be returned.
-itemCreate :: Keyring
+createItem :: Keyring
            -> ItemType
            -> String -- ^ Display name
            -> [Attribute]
            -> String -- ^ The secret
            -> Bool -- ^ Update an existing item, if one exists.
            -> Operation ItemID
-itemCreate k t dn as s u = itemIDOperation
+createItem k t dn as s u = itemIDOperation
 	(item_create k t dn as s u)
 	(item_create_sync k t dn as s u)
 
@@ -309,8 +310,8 @@ itemCreate k t dn as s u = itemIDOperation
 --
 -- The user may be prompted if the calling application doesn't have
 -- necessary access to delete the item.
-itemDelete :: Keyring -> ItemID -> Operation ()
-itemDelete k item = voidOperation
+deleteItem :: Keyring -> ItemID -> Operation ()
+deleteItem k item = voidOperation
 	(item_delete k item)
 	(item_delete_sync k item)
 
@@ -327,15 +328,47 @@ itemDelete k item = voidOperation
 	, cItemID `ItemID'
 	} -> `(Result, ())' resultAndTuple #}
 
+-- | Get a list of all the IDs for items in the keyring. All items which are
+-- not flagged as 'ItemApplicationSecret' are included in the list. This
+-- includes items that the calling application may not (yet) have access to.
+listItemIDs :: Keyring -> Operation [ItemID]
+listItemIDs name = itemIDListOperation
+	(list_item_ids name)
+	(list_item_ids_sync name)
+
+{# fun list_item_ids
+	{ withKeyringName* `Keyring'
+	, id `GetListCallbackPtr'
+	, id `Ptr ()'
+	, id `DestroyNotifyPtr'
+	} -> `CancellationKey' CancellationKey #}
+
+{# fun list_item_ids_sync
+	{ withKeyringName* `Keyring'
+	, alloca- `[ItemID]' stealItemIDList*
+	} -> `Result' Result #}
+
+itemIDListOperation :: OperationImpl GetListCallback [ItemID]
+itemIDListOperation = operationImpl $ \checkResult ->
+	wrapGetListCallback $ \cres ptr _ ->
+	checkResult cres (peekItemIDList ptr)
+
+peekItemIDList :: Ptr () -> IO [ItemID]
+peekItemIDList = mapGList (return . ItemID . fromIntegral . ptrToWordPtr)
+
+stealItemIDList :: Ptr (Ptr ()) -> IO [ItemID]
+stealItemIDList ptr = bracket (peek ptr) freeList peekItemIDList where
+	freeList = {# call g_list_free #}
+
 -- | Get information about an item and its secret.
 --
 -- The user may be prompted if the calling application doesn't have
 -- necessary access to read the item with its secret.
-getItemInfo :: Keyring
-            -> Bool -- ^ Whether to read the secret.
-            -> ItemID
-            -> Operation ItemInfo
-getItemInfo k includeSecret item = itemInfoOperation
+getItem :: Keyring
+        -> Bool -- ^ Whether to read the secret.
+        -> ItemID
+        -> Operation Item
+getItem k includeSecret item = itemInfoOperation
 	(item_get_info_full k item includeSecret)
 	(item_get_info_full_sync k item includeSecret)
 
@@ -352,7 +385,7 @@ getItemInfo k includeSecret item = itemInfoOperation
 	{ withKeyringName* `Keyring'
 	, cItemID `ItemID'
 	, cItemInfoFlags `Bool'
-	, alloca- `ItemInfo' stealItemInfo*
+	, alloca- `Item' stealItemInfo*
 	} -> `Result' Result #}
 
 cItemInfoFlags :: Integral a => Bool -> a
@@ -360,17 +393,17 @@ cItemInfoFlags includeSecret = if includeSecret then 1 else 0
 
 -- | Set information on an item, like its display name, secret, etc.
 --
--- Only the fields in the info info which are non-'Nothing' or non-zero
+-- Only the fields in the Item which are not 'Nothing' or non-zero
 -- will be set on the item.
-setItemInfo :: Keyring -> ItemID -> ItemInfo -> Operation ()
-setItemInfo k item info = voidOperation
+setItem :: Keyring -> ItemID -> Item -> Operation ()
+setItem k item info = voidOperation
 	(item_set_info k item info)
 	(item_set_info_sync k item info)
 
 {# fun item_set_info
 	{ withKeyringName* `Keyring'
 	, cItemID `ItemID'
-	, withItemInfo* `ItemInfo'
+	, withItemInfo* `Item'
 	, id `DoneCallbackPtr'
 	, id `Ptr ()'
 	, id `DestroyNotifyPtr'
@@ -379,13 +412,13 @@ setItemInfo k item info = voidOperation
 {# fun item_set_info_sync
 	{ withKeyringName* `Keyring'
 	, cItemID `ItemID'
-	, withItemInfo* `ItemInfo'
+	, withItemInfo* `Item'
 	} -> `(Result, ())' resultAndTuple #}
 
 -- $attribute-doc
 -- Attributes allow various other pieces of information to be associated
 -- with an item. These can also be used to search for relevant items. Use
--- 'itemGetAttributes' or 'itemSetAttributes' to manipulate attributes in
+-- 'getItemAttributes' or 'setItemAttributes' to manipulate attributes in
 -- the keyring.
 --
 -- Each attribute is either Unicode text, or an unsigned 32-bit integer.
@@ -452,8 +485,8 @@ attributeListOperation = operationImpl $ \checkResult ->
 	checkResult cres (peekAttributeList array)
 
 -- | Get all the attributes for an item.
-itemGetAttributes :: Keyring -> ItemID -> Operation [Attribute]
-itemGetAttributes k item = attributeListOperation
+getItemAttributes :: Keyring -> ItemID -> Operation [Attribute]
+getItemAttributes k item = attributeListOperation
 	(item_get_attributes k item)
 	(item_get_attributes_sync k item)
 
@@ -471,10 +504,10 @@ itemGetAttributes k item = attributeListOperation
 	, alloca- `[Attribute]' stealAttributeList*
 	} -> `Result' Result #}
 
--- | Set all the attributes for an item. These will replace any previous
--- attributes set on the item.
-itemSetAttributes :: Keyring -> ItemID -> [Attribute] -> Operation ()
-itemSetAttributes k item as = voidOperation
+-- | Set all the attributes for an item. These will replace any existing
+-- attributes.
+setItemAttributes :: Keyring -> ItemID -> [Attribute] -> Operation ()
+setItemAttributes k item as = voidOperation
 	(item_set_attributes k item as)
 	(item_set_attributes_sync k item as)
 
@@ -497,7 +530,7 @@ itemSetAttributes k item as = voidOperation
 -- Each item has an access control list, which specifies which applications
 -- may read, write or delete an item. The read access applies only to reading
 -- the secret. All applications can read other parts of the item. ACLs are
--- accessed and changed with 'itemGetACL' and 'itemSetACL'.
+-- accessed and changed with 'getItemAccess' and 'setItemAccess'.
 
 data AccessType
 	= AccessRead
@@ -505,44 +538,44 @@ data AccessType
 	| AccessRemove
 	deriving (Show, Eq, Ord)
 
-data AccessControl = AccessControl
-	{ accessControlName :: Maybe String
-	, accessControlPath :: Maybe String
-	, accessControlType :: [AccessType]
+data Access = Access
+	{ accessName :: Maybe String
+	, accessPath :: Maybe String
+	, accessType :: [AccessType]
 	}
 	deriving (Show, Eq)
 
-peekAccessControl :: Ptr () -> IO AccessControl
+peekAccessControl :: Ptr () -> IO Access
 peekAccessControl ac = do
 	name <- stealNullableUtf8 =<< {# call item_ac_get_display_name #} ac
 	path <- stealNullableUtf8 =<< {# call item_ac_get_path_name #} ac
 	cType <- {# call item_ac_get_access_type #} ac
-	return (AccessControl name path (peekAccessType cType))
+	return (Access name path (peekAccessType cType))
 
-stealACL :: Ptr (Ptr ()) -> IO [AccessControl]
+stealACL :: Ptr (Ptr ()) -> IO [Access]
 stealACL ptr = bracket (peek ptr) freeACL (mapGList peekAccessControl)
 
-withACL :: [AccessControl] -> (Ptr () -> IO a) -> IO a
+withACL :: [Access] -> (Ptr () -> IO a) -> IO a
 withACL acl = bracket (buildACL acl) freeACL
 
-buildACL :: [AccessControl] -> IO (Ptr ())
+buildACL :: [Access] -> IO (Ptr ())
 buildACL acs = bracket
 	{# call application_ref_new #}
 	{# call application_ref_free #} $ \appRef ->
 	buildACL' appRef acs nullPtr
 
-buildACL' :: Ptr () -> [AccessControl] -> Ptr () -> IO (Ptr ())
+buildACL' :: Ptr () -> [Access] -> Ptr () -> IO (Ptr ())
 buildACL'      _       [] list = return list
 buildACL' appRef (ac:acs) list = buildAC appRef ac
 	>>= {# call g_list_append #} list
 	>>= buildACL' appRef acs
 
-buildAC :: Ptr () -> AccessControl -> IO (Ptr ())
+buildAC :: Ptr () -> Access-> IO (Ptr ())
 buildAC appRef ac = do
-	let cAllowed = cAccessTypes (accessControlType ac)
+	let cAllowed = cAccessTypes (accessType ac)
 	ptr <- {# call access_control_new #} appRef cAllowed
-	withNullableUtf8 (accessControlName ac) ({# call item_ac_set_display_name #} ptr)
-	withNullableUtf8 (accessControlPath ac) ({# call item_ac_set_path_name #} ptr)
+	withNullableUtf8 (accessName ac) ({# call item_ac_set_display_name #} ptr)
+	withNullableUtf8 (accessPath ac) ({# call item_ac_set_path_name #} ptr)
 	return ptr
 
 freeACL :: Ptr () -> IO ()
@@ -562,14 +595,14 @@ peekAccessType cint = concat
 	, [AccessRemove | (cint .&. 4) > 0]
 	]
 
-accessControlListOperation :: OperationImpl GetListCallback [AccessControl]
+accessControlListOperation :: OperationImpl GetListCallback [Access]
 accessControlListOperation = operationImpl $ \checkResult ->
 	wrapGetListCallback $ \cres list _ ->
 	checkResult cres (mapGList peekAccessControl list)
 
 -- | Get the access control list for an item.
-itemGetACL :: Keyring -> ItemID -> Operation [AccessControl]
-itemGetACL k item = accessControlListOperation
+getItemAccess :: Keyring -> ItemID -> Operation [Access]
+getItemAccess k item = accessControlListOperation
 	(item_get_acl k item)
 	(item_get_acl_sync k item)
 
@@ -584,20 +617,20 @@ itemGetACL k item = accessControlListOperation
 {# fun item_get_acl_sync
 	{ withKeyringName* `Keyring'
 	, cItemID `ItemID'
-	, alloca- `[AccessControl]' stealACL*
+	, alloca- `[Access]' stealACL*
 	} -> `Result' Result #}
 
 -- | Set the full access control list on an item. This replaces any previous
 -- ACL set on the item.
-itemSetACL :: Keyring -> ItemID -> [AccessControl] -> Operation ()
-itemSetACL k item acl = voidOperation
+setItemAccess :: Keyring -> ItemID -> [Access] -> Operation ()
+setItemAccess k item acl = voidOperation
 	(item_set_acl k item acl)
 	(item_set_acl_sync k item acl)
 
 {# fun item_set_acl
 	{ withKeyringName* `Keyring'
 	, cItemID `ItemID'
-	, withACL* `[AccessControl]'
+	, withACL* `[Access]'
 	, id `DoneCallbackPtr'
 	, id `Ptr ()'
 	, id `DestroyNotifyPtr'
@@ -606,21 +639,21 @@ itemSetACL k item acl = voidOperation
 {# fun item_set_acl_sync
 	{ withKeyringName* `Keyring'
 	, cItemID `ItemID'
-	, withACL* `[AccessControl]'
+	, withACL* `[Access]'
 	} -> `(Result, ())' resultAndTuple #}
 
 -- | Will grant the application access rights to the item, provided callee
 -- has write access to said item.
 --
--- This is similar to performing 'itemGetACL' and 'itemSetACL' with
+-- This is similar to performing 'getItemAccess' and 'setItemAccess' with
 -- appropriate parameters.
-itemGrantAccessRights :: Keyring
-                      -> String -- ^ Display name
-                      -> String -- ^ Application executable path
-                      -> ItemID
-                      -> [AccessType]
-                      -> Operation ()
-itemGrantAccessRights k d p item r = voidOperation
+grantItemAccess :: Keyring
+                -> String -- ^ Display name
+                -> String -- ^ Application executable path
+                -> ItemID
+                -> [AccessType]
+                -> Operation ()
+grantItemAccess k d p item r = voidOperation
 	(item_grant_access_rights k d p item r)
 	(item_grant_access_rights_sync k d p item r)
 
@@ -700,18 +733,28 @@ findItems t as = foundItemsOperation
 	, alloca- `[FoundItem]' stealFoundList*
 	} -> `Result' Result #}
 
--- $keyring-doc
--- GNOME Keyring manages multiple keyrings. Each keyring can store one or
+-- | GNOME Keyring manages multiple keyrings. Each keyring can store one or
 -- more items, containing secrets.
---
--- One of the keyrings is the default keyring, which can in many cases be
--- used by specifying 'Nothing' for a keyring names.
 --
 -- Each keyring can be in a locked or unlocked state. A password must be
 -- specified, either by the user or the calling application, to unlock the
 -- keyring.
+data Keyring
+	= DefaultKeyring
+	| NamedKeyring String
+	deriving (Eq, Show)
 
--- | Get the default keyring name.
+defaultKeyring :: Keyring
+defaultKeyring = DefaultKeyring
+
+sessionKeyring :: Keyring
+sessionKeyring = keyring "session"
+
+keyring :: String -> Keyring
+keyring = NamedKeyring
+
+-- | Get the name of the default keyring. If no keyring is the default,
+-- returns @Nothing@.
 getDefaultKeyring :: Operation (Maybe String)
 getDefaultKeyring = maybeStringOperation
 	get_default_keyring
@@ -769,10 +812,13 @@ stealUtf8List ptr = bracket (peek ptr)
 	{# call gnome_keyring_string_list_free #}
 	(mapGList peekUtf8)
 
--- | Create a new keyring with the specified name. In most cases, 'Nothing'
+-- | Create a new keyring with the specified name. In most cases, @Nothing@
 -- will be passed as the password, which will prompt the user to enter a
 -- password of their choice.
-createKeyring :: String -> Maybe String -> Operation ()
+createKeyring :: String -- ^ Keyring name
+             -> Maybe String -- ^ Keyring password, or @Nothing@ to prompt
+                             -- the user.
+             -> Operation ()
 createKeyring k p = voidOperation (c_create k p) (create_sync k p)
 
 {# fun create as c_create
@@ -860,8 +906,8 @@ unlockKeyring k p = voidOperation (c_unlock k p) (unlock_sync k p)
 	} -> `(Result, ())' resultAndTuple #}
 
 -- | Get information about the keyring.
-getInfo :: Keyring -> Operation KeyringInfo
-getInfo k = keyringInfoOperation (get_info k) (get_info_sync k)
+getKeyringInfo :: Keyring -> Operation KeyringInfo
+getKeyringInfo k = keyringInfoOperation (get_info k) (get_info_sync k)
 
 {# fun get_info
 	{ withKeyringName* `Keyring'
@@ -876,10 +922,10 @@ getInfo k = keyringInfoOperation (get_info k) (get_info_sync k)
 	} -> `Result' Result #}
 
 -- | Set flags and info for the keyring. The only fields in the
--- 'KeyringInfo' which are used are 'keyringLockOnIdle' and
+-- 'KeyringInfo' which may be modified are 'keyringLockOnIdle' and
 -- 'keyringLockTimeout'.
-setInfo :: Keyring -> KeyringInfo -> Operation ()
-setInfo k info = voidOperation
+setKeyringInfo :: Keyring -> KeyringInfo -> Operation ()
+setKeyringInfo k info = voidOperation
 	(set_info k info)
 	(set_info_sync k info)
 
@@ -896,14 +942,15 @@ setInfo k info = voidOperation
 	, withKeyringInfo* `KeyringInfo'
 	} -> `(Result, ())' resultAndTuple #}
 
--- | Change the password for a keyring. In most cases, 'Nothing' would
+-- | Change the password for a keyring. In most cases, @Nothing@ would
 -- be specified for both the original and new passwords to allow the user
 -- to type both.
-changePassword :: String
-               -> Maybe String -- ^ Old password
-               -> Maybe String -- ^ New password
-               -> Operation ()
-changePassword k op np = voidOperation
+changeKeyringPassword
+	:: String -- ^ Keyring name
+	-> Maybe String -- ^ Old password, or @Nothing@ to prompt the user.
+	-> Maybe String -- ^ New password, or @Nothing@ to prompt the user.
+	-> Operation ()
+changeKeyringPassword k op np = voidOperation
 	(change_password k op np)
 	(change_password_sync k op np)
 
@@ -922,38 +969,31 @@ changePassword k op np = voidOperation
 	, withNullableUtf8* `Maybe String'
 	} -> `(Result, ())' resultAndTuple #}
 
--- | Get a list of all the IDs for items in the keyring. All items which are
--- not flagged as 'ItemApplicationSecret' are included in the list. This
--- includes items that the calling application may not (yet) have access to.
-listItemIDs :: Keyring -> Operation [ItemID]
-listItemIDs name = itemIDListOperation
-	(list_item_ids name)
-	(list_item_ids_sync name)
-
-{# fun list_item_ids
-	{ withKeyringName* `Keyring'
-	, id `GetListCallbackPtr'
-	, id `Ptr ()'
-	, id `DestroyNotifyPtr'
-	} -> `CancellationKey' CancellationKey #}
-
-{# fun list_item_ids_sync
-	{ withKeyringName* `Keyring'
-	, alloca- `[ItemID]' stealItemIDList*
-	} -> `Result' Result #}
-
--- Our keyring info populates/is populated by the native info structure.
--- Clients can't create them directly, because GKR doesn't allow it.
-newtype KeyringInfoToken = KeyringInfoToken (ForeignPtr ())
-
 data KeyringInfo = KeyringInfo
-	{ keyringLockOnIdle  :: Bool
+	{
+	
+	-- | Get or set whether the keyring should be locked when idle.
+	  keyringLockOnIdle :: Bool
+	
+	-- | Get or set the keyring lock timeout.
 	, keyringLockTimeout :: Word32
-	, keyringMTime       :: UTCTime
-	, keyringCTime       :: UTCTime
-	, keyringIsLocked    :: Bool
-	, keyringInfoToken   :: KeyringInfoToken
+	, keyringMTime :: UTCTime
+	, keyringCTime :: UTCTime
+	, keyringIsLocked_ :: Bool
+	, keyringInfoToken :: ForeignPtr ()
 	}
+
+-- | Get when the keyring was last modified.
+keyringModified :: KeyringInfo -> UTCTime
+keyringModified = keyringMTime
+
+-- | Get when the keyring was created.
+keyringCreated :: KeyringInfo -> UTCTime
+keyringCreated = keyringCTime
+
+-- | Get whether the keyring is locked.
+keyringIsLocked :: KeyringInfo -> Bool
+keyringIsLocked = keyringIsLocked_
 
 -- The extra pointer shouldn't be printed out when showing a KeyringInfo,
 -- so deriving(Show) can't be used. This instance acts like the
@@ -993,8 +1033,7 @@ peekKeyringInfo ptr = do
 	ctime <- cToUTC `fmap` {# call info_get_ctime #} ptr
 	isLocked <- toBool `fmap` {# call info_get_is_locked #} ptr
 	copy <- copyInfo ptr
-	let token = KeyringInfoToken copy
-	return (KeyringInfo lockOnIdle timeout mtime ctime isLocked token)
+	return (KeyringInfo lockOnIdle timeout mtime ctime isLocked copy)
 
 stealKeyringInfoPtr :: Ptr (Ptr ()) -> IO KeyringInfo
 stealKeyringInfoPtr ptr = do
@@ -1003,7 +1042,7 @@ stealKeyringInfoPtr ptr = do
 
 withKeyringInfo :: KeyringInfo -> (Ptr () -> IO a) -> IO a
 withKeyringInfo info io = do
-	let (KeyringInfoToken infoPtr) = keyringInfoToken info
+	let infoPtr = keyringInfoToken info
 	copy <- withForeignPtr infoPtr copyInfo
 	withForeignPtr copy $ \ptr -> do
 	{# call info_set_lock_on_idle #} ptr (fromBool (keyringLockOnIdle info))
@@ -1337,20 +1376,6 @@ unpackKey (CancellationKey x) = x
 {# fun cancel_request as cancel
 	{ unpackKey `CancellationKey'
 	} -> `()' id #}
-
-data Keyring
-	= DefaultKeyring
-	| NamedKeyring String
-	deriving (Eq, Show)
-
-defaultKeyring :: Keyring
-defaultKeyring = DefaultKeyring
-
-sessionKeyring :: Keyring
-sessionKeyring = keyring "session"
-
-keyring :: String -> Keyring
-keyring = NamedKeyring
 
 newtype CancellationKey = CancellationKey (Ptr ())
 
