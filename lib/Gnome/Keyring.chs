@@ -28,7 +28,10 @@
 -- Documentation for the original library is available at
 -- <http://library.gnome.org/devel/gnome-keyring/stable/>
 module Gnome.Keyring
-	( available
+	(
+	
+	-- * Service status
+	  available
 	
 	-- * Items
 	-- $item-doc
@@ -147,7 +150,7 @@ import           Data.Text.Encoding (encodeUtf8, decodeUtf8)
 #include <gnome-keyring.h>
 {# context prefix = "gnome_keyring_" #}
 
--- | Check whether the client can communicate with a GNOME Keyring server.
+-- | Check whether the client can communicate with the GNOME Keyring service.
 {# fun is_available as available
 	{} -> `Bool' toBool #}
 
