@@ -52,15 +52,3 @@ library
 
   exposed-modules:
     Gnome.Keyring
-
-  other-modules:
-    Gnome.Keyring.Internal.FFI
-    Gnome.Keyring.Internal.Operation
-    Gnome.Keyring.Internal.Types
-    Gnome.Keyring.Item
-    Gnome.Keyring.ItemInfo
-    Gnome.Keyring.Keyring
-    Gnome.Keyring.KeyringInfo
-    Gnome.Keyring.Misc
-    Gnome.Keyring.NetworkPassword
-    Gnome.Keyring.Operation
