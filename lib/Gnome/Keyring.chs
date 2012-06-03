@@ -260,7 +260,7 @@ peekItemID :: Ptr CUInt -> IO ItemID
 peekItemID ptr = fmap ItemID (peek ptr)
 
 cItemID :: ItemID -> CUInt
-cItemID (ItemID x) = fromIntegral x
+cItemID (ItemID x) = x
 
 -- | Create a new item in a keyring.
 --
@@ -303,7 +303,7 @@ itemCreate k t dn as s u = itemIDOperation
 	, withUtf8* `String'
 	, fromBool `Bool'
 	, alloca- `ItemID' peekItemID*
-	} -> `Result' result #}
+	} -> `Result' Result #}
 
 -- | Delete an item in a keyring.
 --
@@ -353,7 +353,7 @@ getItemInfo k includeSecret item = itemInfoOperation
 	, cItemID `ItemID'
 	, cItemInfoFlags `Bool'
 	, alloca- `ItemInfo' stealItemInfo*
-	} -> `Result' result #}
+	} -> `Result' Result #}
 
 cItemInfoFlags :: Integral a => Bool -> a
 cItemInfoFlags includeSecret = if includeSecret then 1 else 0
@@ -413,23 +413,24 @@ withAttributeList attrs io = bracket newList freeAttributeList buildList where
 	, withUtf8* `String'
 	} -> `()' id #}
 
-{# fun attribute_list_append_uint32 as appendUInt32
-	{ id `Ptr ()'
-	, withUtf8* `String'
-	, fromIntegral `Word32'
-	} -> `()' id #}
+appendUInt32 :: Ptr () -> String -> Word32 -> IO ()
+appendUInt32 list name val = withUtf8 name (\name_ptr -> c_append_uint32 list name_ptr val)
+
+foreign import ccall unsafe "gnome_keyring_attribute_list_append_uint32"
+	c_append_uint32 :: Ptr () -> CString -> Word32 -> IO ()
 
 peekAttribute :: Ptr () -> IO Attribute
 peekAttribute attr = do
 	name <- peekUtf8 =<< {# get GnomeKeyringAttribute->name #} attr
 	cType <- {# get GnomeKeyringAttribute->type #} attr
-	case toEnum (fromIntegral cType) of
-		ATTRIBUTE_TYPE_STRING -> do
+	case cType of
+		0 -> do
 			value <- peekUtf8 =<< {# get GnomeKeyringAttribute.value.string #} attr
 			return (TextAttribute name value)
-		ATTRIBUTE_TYPE_UINT32 -> do
+		1 -> do
 			cValue <- {# get GnomeKeyringAttribute.value.integer #} attr
 			return (WordAttribute name (fromIntegral cValue))
+		_ -> undefined
 
 peekAttributeList :: Ptr () -> IO [Attribute]
 peekAttributeList = mapGArray peekAttribute {# sizeof GnomeKeyringAttribute #}
@@ -468,7 +469,7 @@ itemGetAttributes k item = attributeListOperation
 	{ withKeyringName* `Keyring'
 	, cItemID `ItemID'
 	, alloca- `[Attribute]' stealAttributeList*
-	} -> `Result' result #}
+	} -> `Result' Result #}
 
 -- | Set all the attributes for an item. These will replace any previous
 -- attributes set on the item.
@@ -497,8 +498,6 @@ itemSetAttributes k item as = voidOperation
 -- may read, write or delete an item. The read access applies only to reading
 -- the secret. All applications can read other parts of the item. ACLs are
 -- accessed and changed with 'itemGetACL' and 'itemSetACL'.
-
-{# enum GnomeKeyringAccessType as RawAccessType {} deriving (Show) #}
 
 data AccessType
 	= AccessRead
@@ -549,21 +548,20 @@ buildAC appRef ac = do
 freeACL :: Ptr () -> IO ()
 freeACL = {# call acl_free #}
 
-cAccessTypes :: Bits a => Set AccessType -> a
-cAccessTypes = foldr (.|.) 0 . map (fromIntegral . fromEnum . fromAccessType) . toList where
+cAccessTypes :: Set AccessType -> CInt
+cAccessTypes = foldr (.|.) 0 . map fromAccessType . toList where
 
-peekAccessType :: Integral a => a -> Set AccessType
+peekAccessType :: CInt -> Set AccessType
 peekAccessType cint = fromList $ concat
-	[ [AccessRead   | int .&. fromEnum ACCESS_READ   > 0]
-	, [AccessWrite  | int .&. fromEnum ACCESS_WRITE  > 0]
-	, [AccessRemove | int .&. fromEnum ACCESS_REMOVE > 0]
+	[ [AccessRead   | (cint .&. 1) > 0]
+	, [AccessWrite  | (cint .&. 2) > 0]
+	, [AccessRemove | (cint .&. 4) > 0]
 	]
-	where int = fromIntegral cint
 
-fromAccessType :: AccessType -> RawAccessType
-fromAccessType AccessRead   = ACCESS_READ
-fromAccessType AccessWrite  = ACCESS_WRITE
-fromAccessType AccessRemove = ACCESS_REMOVE
+fromAccessType :: AccessType -> CInt
+fromAccessType AccessRead   = 1
+fromAccessType AccessWrite  = 2
+fromAccessType AccessRemove = 4
 
 accessControlListOperation :: OperationImpl GetListCallback [AccessControl]
 accessControlListOperation = operationImpl $ \checkResult ->
@@ -588,7 +586,7 @@ itemGetACL k item = accessControlListOperation
 	{ withKeyringName* `Keyring'
 	, cItemID `ItemID'
 	, alloca- `[AccessControl]' stealACL*
-	} -> `Result' result #}
+	} -> `Result' Result #}
 
 -- | Set the full access control list on an item. This replaces any previous
 -- ACL set on the item.
@@ -660,8 +658,7 @@ peekFound f = do
 	itemID <- {# get GnomeKeyringFound->item_id #} f
 	attrs <- peekAttributeList =<< {# get GnomeKeyringFound->attributes #} f
 	secret <- peekUtf8 =<< {# get GnomeKeyringFound->secret #} f
-	let itemID' = ItemID (fromIntegral itemID)
-	return (FoundItem (keyring keyringName) itemID' attrs secret)
+	return (FoundItem (keyring keyringName) (ItemID itemID) attrs secret)
 
 stealFoundList :: Ptr (Ptr ()) -> IO [FoundItem]
 stealFoundList ptr = bracket (peek ptr)
@@ -695,7 +692,7 @@ findItems t as = foundItemsOperation
 	{ fromItemType `ItemType'
 	, withAttributeList* `[Attribute]'
 	, alloca- `[FoundItem]' stealFoundList*
-	} -> `Result' result #}
+	} -> `Result' Result #}
 
 -- $keyring-doc
 -- GNOME Keyring manages multiple keyrings. Each keyring can store one or
@@ -722,7 +719,7 @@ getDefaultKeyring = maybeStringOperation
 
 {# fun get_default_keyring_sync
 	{ alloca- `Maybe String' stealNullableUtf8Ptr*
-	} -> `Result' result #}
+	} -> `Result' Result #}
 
 stealNullableUtf8Ptr :: Ptr CString -> IO (Maybe String)
 stealNullableUtf8Ptr ptr = bracket (peek ptr) free peekNullableUtf8
@@ -759,7 +756,7 @@ listKeyringNames = stringListOperation
 
 {# fun list_keyring_names_sync
 	{ alloca- `[String]' stealUtf8List*
-	} -> `Result' result #}
+	} -> `Result' Result #}
 
 stealUtf8List :: Ptr (Ptr ()) -> IO [String]
 stealUtf8List ptr = bracket (peek ptr)
@@ -870,7 +867,7 @@ getInfo k = keyringInfoOperation (get_info k) (get_info_sync k)
 {# fun get_info_sync
 	{ withKeyringName* `Keyring'
 	, alloca- `KeyringInfo' stealKeyringInfoPtr*
-	} -> `Result' result #}
+	} -> `Result' Result #}
 
 -- | Set flags and info for the keyring. The only fields in the
 -- 'KeyringInfo' which are used are 'keyringLockOnIdle' and
@@ -937,7 +934,7 @@ listItemIDs name = itemIDListOperation
 {# fun list_item_ids_sync
 	{ withKeyringName* `Keyring'
 	, alloca- `[ItemID]' stealItemIDList*
-	} -> `Result' result #}
+	} -> `Result' Result #}
 
 -- Our keyring info populates/is populated by the native info structure.
 -- Clients can't create them directly, because GKR doesn't allow it.
@@ -1074,7 +1071,7 @@ findNetworkPassword loc = let
 	, withNullableUtf8* `Maybe String'
 	, fromIntegral `Word32'
 	, alloca- `[NetworkPassword]' stealPasswordList*
-	} -> `Result' result #}
+	} -> `Result' Result #}
 
 -- | Store a network password.
 --
@@ -1125,7 +1122,7 @@ setNetworkPassword k loc secret = let
 	, fromIntegral `Word32'
 	, withUtf8* `String'
 	, alloca- `ItemID' peekItemID*
-	} -> `Result' result #}
+	} -> `Result' Result #}
 
 peekPassword :: Ptr () -> IO NetworkPassword
 peekPassword pwd = do
@@ -1149,7 +1146,7 @@ peekPassword pwd = do
 	
 	-- Keyring, item, and secret
 	keyringName <- peekUtf8 =<< {# get GnomeKeyringNetworkPasswordData->keyring #} pwd
-	itemID <- (ItemID . fromIntegral) `fmap` {# get GnomeKeyringNetworkPasswordData->item_id #} pwd
+	itemID <- ItemID `fmap` {# get GnomeKeyringNetworkPasswordData->item_id #} pwd
 	password <- peekUtf8 =<< {# get GnomeKeyringNetworkPasswordData->password #} pwd
 	return (NetworkPassword (keyring keyringName) itemID loc password)
 
@@ -1173,8 +1170,8 @@ sync :: Operation a -> IO (Either KeyringError a)
 sync op = do
 	(res, x) <- syncImpl op
 	return $ case res of
-		RESULT_OK -> Right x
-		_         -> Left (resultToError res)
+		Result 0 -> Right x
+		_        -> Left (resultToError res)
 
 sync_ :: Operation a -> IO a
 sync_ op = do
@@ -1192,9 +1189,9 @@ type OperationImpl a b = (FunPtr a -> Ptr () -> DestroyNotifyPtr -> IO Cancellat
 operationImpl :: ((CInt -> IO a -> IO ()) -> IO (FunPtr b)) -> OperationImpl b a
 operationImpl impl asyncIO = Operation $ \onError onSuccess -> do
 	
-	callback <- impl $ \cres io -> case result cres of
-		RESULT_OK -> io >>= onSuccess
-		x -> onError (resultToError x)
+	callback <- impl $ \cres io -> case cres of
+		0 -> io >>= onSuccess
+		x        -> onError (resultToError (Result x))
 	
 	destroy <- wrapDestroyNotify $ \ptr -> do
 		let stable = castPtrToStablePtr ptr
@@ -1281,9 +1278,9 @@ mapGArray' f size n ptr = do
 	return (attr : attrs)
 
 resultToError :: Result -> KeyringError
-resultToError RESULT_CANCELLED = KeyringError "Canceled"
-resultToError x = unsafePerformIO $ do
-	ptr <- {# call gnome_keyring_result_to_message #} (fromIntegral (fromEnum x))
+resultToError (Result 7) = KeyringError "Canceled"
+resultToError (Result x) = unsafePerformIO $ do
+	ptr <- {# call gnome_keyring_result_to_message #} x
 	msg <- peekUtf8 ptr
 	return (KeyringError msg)
 
@@ -1352,12 +1349,7 @@ newtype KeyringException = KeyringException KeyringError
 
 instance Exception KeyringException
 
-{# enum GnomeKeyringResult as Result {}
-	with prefix = "gnome_keyring_"
-	deriving (Show) #}
+newtype Result = Result CInt
 
-result :: Integral a => a -> Result
-result = toEnum . fromIntegral
-
-resultAndTuple :: Integral a => a -> (Result, ())
-resultAndTuple x = (result x, ())
+resultAndTuple :: CInt -> (Result, ())
+resultAndTuple x = (Result x, ())
