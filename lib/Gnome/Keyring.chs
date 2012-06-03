@@ -688,12 +688,38 @@ grantItemAccess k d p item r = voidOperation
 	} -> `(Result, ())' resultAndTuple #}
 
 data FoundItem = FoundItem
-	{ foundItemKeyring :: Keyring
-	, foundItemID :: ItemID
-	, foundItemAttributes :: [Attribute]
-	, foundItemSecret :: String
+	{ foundItemKeyring_ :: Keyring
+	, foundItemID_ :: ItemID
+	, foundItemAttributes_ :: [Attribute]
+	, foundItemSecret_ :: String
 	}
-	deriving (Show, Eq)
+	deriving (Eq)
+
+instance Show FoundItem where
+	showsPrec d x = showParen (d > 10) $
+		s "FoundItem " .
+		s " {foundItemKeyring = " . shows (foundItemKeyring_ x) .
+		s ", foundItemID = " . shows (foundItemID_ x) .
+		s ", foundItemAttributes_= " . shows (foundItemAttributes_ x) .
+		s ", foundItemSecret = " . shows (foundItemSecret_ x) .
+		s "}"
+		where s = showString
+
+-- | Get which keyring the item was found in.
+foundItemKeyring :: FoundItem -> Keyring
+foundItemKeyring = foundItemKeyring_
+
+-- | Get the found item's ID.
+foundItemID :: FoundItem -> ItemID
+foundItemID = foundItemID_
+
+-- | Get the found item's attributes.
+foundItemAttributes :: FoundItem -> [Attribute]
+foundItemAttributes = foundItemAttributes_
+
+-- | Get the found item's secret.
+foundItemSecret :: FoundItem -> String
+foundItemSecret = foundItemSecret_
 
 peekFound :: Ptr () -> IO FoundItem
 peekFound f = do
