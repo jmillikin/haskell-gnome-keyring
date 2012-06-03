@@ -33,7 +33,7 @@ module Gnome.Keyring
 	-- * Items
 	-- $item-doc
 	, ItemID
-	, ItemType (..)
+	, ItemType(..)
 	, itemCreate
 	, itemDelete
 	, getItemInfo
@@ -168,7 +168,6 @@ data ItemType
 	| ItemChainedKeyringPassword
 	| ItemEncryptionKeyPassword
 	| ItemPublicKeyStorage
-	| ItemTypeUnknown String
 	deriving (Show, Eq)
 
 data ItemInfo = ItemInfo
@@ -187,22 +186,21 @@ itemCreated :: ItemInfo -> UTCTime
 itemCreated = itemCTime
 
 fromItemType :: ItemType -> CInt
-fromItemType = fromIntegral . fromEnum . toRaw where
-	toRaw ItemGenericSecret = ITEM_GENERIC_SECRET
-	toRaw ItemNetworkPassword = ITEM_NETWORK_PASSWORD
-	toRaw ItemNote = ITEM_NOTE
-	toRaw ItemChainedKeyringPassword = ITEM_CHAINED_KEYRING_PASSWORD
-	toRaw ItemEncryptionKeyPassword = ITEM_ENCRYPTION_KEY_PASSWORD
-	toRaw ItemPublicKeyStorage = ITEM_PK_STORAGE
+fromItemType ItemGenericSecret = 0
+fromItemType ItemNetworkPassword = 1
+fromItemType ItemNote = 2
+fromItemType ItemChainedKeyringPassword = 3
+fromItemType ItemEncryptionKeyPassword = 4
+fromItemType ItemPublicKeyStorage = 0x100
 
-toItemType :: RawType -> ItemType
-toItemType ITEM_GENERIC_SECRET = ItemGenericSecret
-toItemType ITEM_NETWORK_PASSWORD = ItemNetworkPassword
-toItemType ITEM_NOTE = ItemNote
-toItemType ITEM_CHAINED_KEYRING_PASSWORD = ItemChainedKeyringPassword
-toItemType ITEM_ENCRYPTION_KEY_PASSWORD = ItemEncryptionKeyPassword
-toItemType ITEM_PK_STORAGE = ItemPublicKeyStorage
-toItemType x = ItemTypeUnknown (show x)
+toItemType :: CInt -> ItemType
+toItemType 0 = ItemGenericSecret
+toItemType 1 = ItemNetworkPassword
+toItemType 2 = ItemNote
+toItemType 3 = ItemChainedKeyringPassword
+toItemType 4 = ItemEncryptionKeyPassword
+toItemType 0x100 = ItemPublicKeyStorage
+toItemType _ = ItemGenericSecret
 
 peekItemInfo :: Ptr () -> IO ItemInfo
 peekItemInfo info = do
@@ -211,8 +209,7 @@ peekItemInfo info = do
 	name <- stealNullableUtf8 =<< {# call item_info_get_display_name #} info
 	mtime <- cToUTC `fmap` {# call item_info_get_mtime #} info
 	ctime <- cToUTC `fmap` {# call item_info_get_ctime #} info
-	let t = toItemType (toEnum (fromIntegral cType))
-	return (ItemInfo t secret name mtime ctime)
+	return (ItemInfo (toItemType cType) secret name mtime ctime)
 
 stealItemInfo :: Ptr (Ptr ()) -> IO ItemInfo
 stealItemInfo ptr = bracket (peek ptr) freeItemInfo peekItemInfo
@@ -261,8 +258,6 @@ itemInfoOperation = operationImpl $ \checkResult ->
 
 peekItemID :: (Storable a, Integral a) => Ptr a -> IO ItemID
 peekItemID = fmap (ItemID . fromIntegral) . peek
-
-{# enum GnomeKeyringItemType as RawType {} deriving (Show) #}
 
 cItemID :: Integral a => ItemID -> a
 cItemID (ItemID x) = fromIntegral x
