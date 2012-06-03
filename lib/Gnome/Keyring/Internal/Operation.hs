@@ -36,12 +36,12 @@ import           Gnome.Keyring.Internal.FFI
 import           Gnome.Keyring.Internal.Types
 
 data Operation a = Operation
-	{ async    :: (Error -> IO ()) -> (a -> IO ()) -> IO CancellationKey
+	{ async    :: (KeyringError -> IO ()) -> (a -> IO ()) -> IO CancellationKey
 	, syncImpl :: IO (Result, a)
 	}
 
 -- Synchronous operation public API
-sync :: Operation a -> IO (Either Error a)
+sync :: Operation a -> IO (Either KeyringError a)
 sync op = do
 	(res, x) <- syncImpl op
 	return $ case res of
@@ -56,7 +56,7 @@ sync_ op = do
 		Left err -> throwIO (KeyringException err)
 
 -- Helper for async operations which return nothing useful
-async' :: Operation a -> (Error -> IO ()) -> IO ()  -> IO CancellationKey
+async' :: Operation a -> (KeyringError -> IO ()) -> IO ()  -> IO CancellationKey
 async' op onError onSuccess = async op onError (const onSuccess)
 
 -- Implementation details of async operations

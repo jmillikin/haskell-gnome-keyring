@@ -15,7 +15,8 @@
 module Gnome.Keyring.Operation
 	( Operation
 	, CancellationKey
-	, Error (..)
+	, KeyringError
+	, keyringErrorMessage
 	, async
 	, async'
 	, sync

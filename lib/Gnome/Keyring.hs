@@ -103,7 +103,8 @@ module Gnome.Keyring
 	-- * Operations
 	, Operation
 	, CancellationKey
-	, Error (..)
+	, KeyringError
+	, keyringErrorMessage
 	, async
 	, async'
 	, sync

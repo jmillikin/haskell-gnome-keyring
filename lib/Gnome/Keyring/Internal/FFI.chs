@@ -48,6 +48,8 @@ module Gnome.Keyring.Internal.FFI
 	, mapGList
 	, mapGArray
 	
+	, resultToError
+	
 	-- * Re-export, since any clients of this module will need Foreign
 	-- and Foreign.C anyway.
 	, module Foreign
@@ -61,12 +63,13 @@ import           Data.Text (Text)
 import           Data.Text.Encoding (encodeUtf8, decodeUtf8)
 import           Data.Time (UTCTime)
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
+import           System.IO.Unsafe (unsafePerformIO)
 
 -- Import unqualified for c2hs
-import           Foreign
+import           Foreign hiding (unsafePerformIO)
 import           Foreign.C
 
-import           Gnome.Keyring.Internal.Types (Keyring(..))
+import           Gnome.Keyring.Internal.Types
 
 #include <gnome-keyring.h>
 
@@ -125,6 +128,13 @@ mapGArray' f size n ptr = do
 	attr <- f $ castPtr ptr
 	attrs <- mapGArray' f size (n - 1) (plusPtr ptr size)
 	return $ attr : attrs
+
+resultToError :: Result -> KeyringError
+resultToError RESULT_CANCELLED = KeyringError "Canceled"
+resultToError x = unsafePerformIO $ do
+	ptr <- {# call gnome_keyring_result_to_message #} (fromIntegral (fromEnum x))
+	msg <- peekUtf8 ptr
+	return (KeyringError msg)
 
 --------------
 

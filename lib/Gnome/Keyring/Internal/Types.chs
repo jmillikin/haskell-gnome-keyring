@@ -20,10 +20,11 @@ module Gnome.Keyring.Internal.Types
 	, keyring
 	
 	, CancellationKey (..)
-	, Error (..)
+	, KeyringError(..)
+	, keyringErrorMessage
+	
 	, KeyringException (..)
 	, Result (..)
-	, resultToError
 	, result
 	, resultAndTuple
 	) where
@@ -47,20 +48,13 @@ keyring = NamedKeyring
 
 newtype CancellationKey = CancellationKey (Ptr ())
 
-data Error
-	= ErrorDenied
-	| ErrorNoKeyringDaemon
-	| ErrorAlreadyUnlocked
-	| ErrorNoSuchKeyring
-	| ErrorBadArguments
-	| ErrorIOError
-	| ErrorCancelled
-	| ErrorKeyringAlreadyExists
-	| ErrorNoMatch
-	| ErrorUnknown String
-	deriving (Show, Eq, Typeable)
+newtype KeyringError = KeyringError String
+	deriving (Eq, Show)
 
-newtype KeyringException = KeyringException Error
+keyringErrorMessage :: KeyringError -> String
+keyringErrorMessage (KeyringError msg) = msg
+
+newtype KeyringException = KeyringException KeyringError
 	deriving (Show, Eq, Typeable)
 
 instance Exception KeyringException
@@ -68,18 +62,6 @@ instance Exception KeyringException
 {# enum GnomeKeyringResult as Result {}
 	with prefix = "gnome_keyring_"
 	deriving (Show) #}
-
-resultToError :: Result -> Error
-resultToError RESULT_DENIED = ErrorDenied
-resultToError RESULT_NO_KEYRING_DAEMON = ErrorNoKeyringDaemon
-resultToError RESULT_ALREADY_UNLOCKED = ErrorAlreadyUnlocked
-resultToError RESULT_NO_SUCH_KEYRING = ErrorNoSuchKeyring
-resultToError RESULT_BAD_ARGUMENTS = ErrorBadArguments
-resultToError RESULT_IO_ERROR = ErrorIOError
-resultToError RESULT_CANCELLED = ErrorCancelled
-resultToError RESULT_KEYRING_ALREADY_EXISTS = ErrorKeyringAlreadyExists
-resultToError RESULT_NO_MATCH = ErrorNoMatch
-resultToError x = ErrorUnknown (show x)
 
 result :: Integral a => a -> Result
 result = toEnum . fromIntegral
