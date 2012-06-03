@@ -74,6 +74,7 @@ module Gnome.Keyring
 	-- $keyring-doc
 	, Keyring
 	, defaultKeyring
+	, sessionKeyring
 	, keyring
 	
 	-- ** Basic operations
@@ -1344,6 +1345,9 @@ data Keyring
 
 defaultKeyring :: Keyring
 defaultKeyring = DefaultKeyring
+
+sessionKeyring :: Keyring
+sessionKeyring = keyring "session"
 
 keyring :: String -> Keyring
 keyring = NamedKeyring
