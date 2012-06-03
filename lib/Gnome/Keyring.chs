@@ -158,7 +158,7 @@ import           Data.Text.Encoding (encodeUtf8, decodeUtf8)
 -- reading the secret. All applications can read other parts of the item.
 -- ACLs are accessed and changed through 'AccessControl' values.
 
-newtype ItemID = ItemID Word32
+newtype ItemID = ItemID CUInt
 	deriving (Show, Eq, Ord)
 
 data ItemType
@@ -249,17 +249,17 @@ foreign import ccall "wrapper"
 itemIDOperation :: OperationImpl GetIntCallback ItemID
 itemIDOperation = operationImpl $ \checkResult ->
 	wrapGetIntCallback $ \cres cint _ ->
-	checkResult cres (return (ItemID (fromIntegral cint)))
+	checkResult cres (return (ItemID cint))
 
 itemInfoOperation :: OperationImpl GetItemInfoCallback ItemInfo
 itemInfoOperation = operationImpl $ \checkResult ->
 	wrapGetItemInfoCallback $ \cres ptr _ ->
 	checkResult cres (peekItemInfo ptr)
 
-peekItemID :: (Storable a, Integral a) => Ptr a -> IO ItemID
-peekItemID = fmap (ItemID . fromIntegral) . peek
+peekItemID :: Ptr CUInt -> IO ItemID
+peekItemID ptr = fmap ItemID (peek ptr)
 
-cItemID :: Integral a => ItemID -> a
+cItemID :: ItemID -> CUInt
 cItemID (ItemID x) = fromIntegral x
 
 -- | Create a new item in a keyring.
