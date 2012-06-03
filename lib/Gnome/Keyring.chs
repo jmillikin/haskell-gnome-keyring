@@ -120,13 +120,13 @@ module Gnome.Keyring
 	
 	-- * Operations
 	, Operation
-	, CancellationKey
 	, KeyringError
 	, keyringErrorMessage
-	, async
-	, async'
 	, sync
 	, sync_
+	
+	, async
+	, CancellationKey
 	, cancel
 	) where
 
@@ -1302,12 +1302,18 @@ stealPasswordList ptr = bracket (peek ptr)
 	{# call network_password_list_free #}
 	(mapGList peekPassword)
 
+-- | A keyring operation can be run synchronously or asynchronously.
+-- Asynchronous execution requires a running GLib event loop.
 data Operation a = Operation
-	{ async    :: (KeyringError -> IO ()) -> (a -> IO ()) -> IO CancellationKey
+	{ asyncImpl :: (KeyringError -> IO ()) -> (a -> IO ()) -> IO CancellationKey
 	, syncImpl :: IO (Result, a)
 	}
 
--- Synchronous operation public API
+-- | Runs an operation synchronously, and returns either the result or
+-- an error.
+--
+-- Running an operation synchronously does not require a GLib event loop
+-- to be active.
 sync :: Operation a -> IO (Either KeyringError a)
 sync op = do
 	(res, x) <- syncImpl op
@@ -1315,6 +1321,11 @@ sync op = do
 		Result 0 -> Right x
 		_        -> Left (resultToError res)
 
+-- | Runs an operation synchronously. If it succeeded, returns the result.
+-- Otherwise, throws a 'KeyringError'.
+--
+-- Running an operation synchronously does not require a GLib event loop
+-- to be active.
 sync_ :: Operation a -> IO a
 sync_ op = do
 	res <- sync op
@@ -1322,9 +1333,14 @@ sync_ op = do
 		Right x -> return x
 		Left err -> throwIO (KeyringException err)
 
--- Helper for async operations which return nothing useful
-async' :: Operation a -> (KeyringError -> IO ()) -> IO ()  -> IO CancellationKey
-async' op onError onSuccess = async op onError (const onSuccess)
+-- | Runs an operation asynchronously, calling one of the given callbacks on
+-- success or failure.
+--
+-- The returned 'CancellationKey' can be used to cancel a pending operation.
+--
+-- Running an operation asynchronously requires a running GLib event loop.
+async :: Operation a -> (KeyringError -> IO ()) -> (a -> IO ()) -> IO CancellationKey
+async = asyncImpl
 
 -- Implementation details of async operations
 type OperationImpl a b = (FunPtr a -> Ptr () -> DestroyNotifyPtr -> IO CancellationKey) -> IO (Result, b) -> Operation b
@@ -1420,7 +1436,7 @@ mapGArray' f size n ptr = do
 	return (attr : attrs)
 
 resultToError :: Result -> KeyringError
-resultToError (Result 7) = KeyringError "Canceled"
+resultToError (Result 7) = KeyringError "Operation canceled by user or application"
 resultToError (Result x) = unsafePerformIO $ do
 	ptr <- {# call gnome_keyring_result_to_message #} x
 	msg <- peekUtf8 ptr
@@ -1461,8 +1477,8 @@ foreign import ccall "wrapper"
 unpackKey :: CancellationKey -> Ptr ()
 unpackKey (CancellationKey x) = x
 
--- | Cancel an asynchronous request. The request will return
--- 'ErrorCancelled'.
+-- | Cancel a running asynchronous operation. The error callback will be
+-- called with a 'KeyringError' stating that the operation was canceled.
 {# fun cancel_request as cancel
 	{ unpackKey `CancellationKey'
 	} -> `()' id #}
