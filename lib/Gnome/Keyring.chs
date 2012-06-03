@@ -101,9 +101,22 @@ module Gnome.Keyring
 	, setKeyringInfo
 	
 	-- * Network passwords
-	-- $network-password-doc
-	, NetworkPassword (..)
-	, NetworkPasswordLocation (..)
+	, NetworkPassword
+	, networkPasswordKeyring
+	, networkPasswordSecret
+	, networkPasswordItemID
+	, networkPasswordNetwork
+	
+	, Network
+	, network
+	, networkProtocol
+	, networkServer
+	, networkObject
+	, networkAuthType
+	, networkPort
+	, networkUser
+	, networkDomain
+	
 	, findNetworkPassword
 	, setNetworkPassword
 	
@@ -1052,28 +1065,80 @@ withKeyringInfo info io = do
 foreign import ccall "gnome-keyring.h &gnome_keyring_info_free"
 	finalizeKeyringInfo :: FunPtr (Ptr a -> IO ())
 
--- $network-password-doc
--- Networks passwords are a simple way of saving passwords associated with
+-- | Networks passwords are a simple way of saving passwords associated with
 -- a certain user, server, protocol, and other fields.
-
 data NetworkPassword = NetworkPassword
-	{ networkPasswordKeyring  :: Keyring
-	, networkPasswordItemID   :: ItemID
-	, networkPasswordLocation :: NetworkPasswordLocation
-	, networkPassword         :: String
+	{ networkPasswordKeyring_ :: Keyring
+	, networkPasswordItemID_ :: ItemID
+	, networkPasswordNetwork_ :: Network
+	, networkPasswordSecret_ :: String
+	}
+	deriving (Eq)
+
+-- | Get which keyring the password is stored in.
+networkPasswordKeyring :: NetworkPassword -> Keyring
+networkPasswordKeyring = networkPasswordKeyring_
+
+-- | Get the ID of the network password's keyring item.
+networkPasswordItemID :: NetworkPassword -> ItemID
+networkPasswordItemID = networkPasswordItemID_
+
+-- | Get the network location metadata associated with the network password.
+networkPasswordNetwork :: NetworkPassword -> Network
+networkPasswordNetwork = networkPasswordNetwork_
+
+-- | Get the network password's secret value.
+networkPasswordSecret :: NetworkPassword -> String
+networkPasswordSecret = networkPasswordSecret_
+
+instance Show NetworkPassword where
+	showsPrec d x = showParen (d > 10) $ 
+		s "NetworkPassword" .
+		s " {networkPasswordKeyring = " . shows (networkPasswordKeyring_ x) .
+		s ", networkPasswordItemID = " . shows (networkPasswordItemID_ x) .
+		s ", networkPasswordNetwork = " . shows (networkPasswordNetwork_ x) .
+		s ", networkPasswordSecret = " . shows (networkPasswordSecret_ x) .
+		s "}"
+		where s = showString
+
+-- | A set of predicates to store with a 'NetworkPassword', used to find the
+-- password later.
+data Network = Network
+	{
+	-- | Get or set the network protocol.
+	  networkProtocol :: Maybe String
+	
+	-- | Get or set the network server name.
+	, networkServer :: Maybe String
+	
+	-- | Get or set the network object.
+	, networkObject :: Maybe String
+	
+	-- | Get or set the type of authentication.
+	, networkAuthType :: Maybe String
+	
+	-- | Get or set the network port. A port of 0 is considered blank.
+	, networkPort :: Word32
+	
+	-- | Get or set the network user name.
+	, networkUser :: Maybe String
+	
+	-- | Get or set the network domain name.
+	, networkDomain :: Maybe String
 	}
 	deriving (Show, Eq)
 
-data NetworkPasswordLocation = NetworkPasswordLocation
-	{ locationProtocol :: Maybe String
-	, locationServer   :: Maybe String
-	, locationObject   :: Maybe String
-	, locationAuthType :: Maybe String
-	, locationPort     :: Word32
-	, locationUser     :: Maybe String
-	, locationDomain   :: Maybe String
+-- | A 'Network' with no set fields.
+network :: Network
+network = Network
+	{ networkProtocol = Nothing
+	, networkServer = Nothing
+	, networkObject = Nothing
+	, networkAuthType = Nothing
+	, networkPort = 0
+	, networkUser = Nothing
+	, networkDomain = Nothing
 	}
-	deriving (Show, Eq)
 
 -- | Find a previously stored 'NetworkPassword'. Searches all keyrings.
 --
@@ -1083,15 +1148,15 @@ data NetworkPasswordLocation = NetworkPasswordLocation
 -- Network passwords are items with the 'ItemType' 'ItemNetworkPassword'.
 --
 -- Returns an empty list if no items were found.
-findNetworkPassword :: NetworkPasswordLocation -> Operation [NetworkPassword]
-findNetworkPassword loc = let
-	p1 = locationUser     loc
-	p2 = locationDomain   loc
-	p3 = locationServer   loc
-	p4 = locationObject   loc
-	p5 = locationProtocol loc
-	p6 = locationAuthType loc
-	p7 = locationPort     loc
+findNetworkPassword :: Network -> Operation [NetworkPassword]
+findNetworkPassword net = let
+	p1 = networkUser     net
+	p2 = networkDomain   net
+	p3 = networkServer   net
+	p4 = networkObject   net
+	p5 = networkProtocol net
+	p6 = networkAuthType net
+	p7 = networkPort     net
 	in passwordListOperation
 		(find_network_password p1 p2 p3 p4 p5 p6 p7)
 		(do
@@ -1138,17 +1203,18 @@ passwordListOperation = operationImpl $ \checkResult ->
 -- Whether a new item is created or not, the item's ID will be returned.
 --
 -- Network passwords are items with the 'ItemType' 'ItemNetworkPassword'.
-setNetworkPassword :: Keyring -> NetworkPasswordLocation ->
-                      String ->
-                      Operation ItemID
-setNetworkPassword k loc secret = let
-	p1 = locationUser     loc
-	p2 = locationDomain   loc
-	p3 = locationServer   loc
-	p4 = locationObject   loc
-	p5 = locationProtocol loc
-	p6 = locationAuthType loc
-	p7 = locationPort     loc
+setNetworkPassword :: Keyring
+                   -> Network
+                   -> String
+                   -> Operation ItemID
+setNetworkPassword k net secret = let
+	p1 = networkUser     net
+	p2 = networkDomain   net
+	p3 = networkServer   net
+	p4 = networkObject   net
+	p5 = networkProtocol net
+	p6 = networkAuthType net
+	p7 = networkPort     net
 	in itemIDOperation
 		(set_network_password k p1 p2 p3 p4 p5 p6 p7 secret)
 		(set_network_password_sync k p1 p2 p3 p4 p5 p6 p7 secret)
@@ -1191,21 +1257,21 @@ peekPassword pwd = do
 	port <- fromIntegral `fmap` {# get GnomeKeyringNetworkPasswordData->port #} pwd
 	user <- peekNullableUtf8 =<< {# get GnomeKeyringNetworkPasswordData->user #} pwd
 	domain <- peekNullableUtf8 =<< {# get GnomeKeyringNetworkPasswordData->domain #} pwd
-	let loc = NetworkPasswordLocation
-		{ locationProtocol = protocol
-		, locationServer   = server
-		, locationObject   = object
-		, locationAuthType = authType
-		, locationPort     = port
-		, locationUser     = user
-		, locationDomain   = domain
+	let net = Network
+		{ networkProtocol = protocol
+		, networkServer   = server
+		, networkObject   = object
+		, networkAuthType = authType
+		, networkPort     = port
+		, networkUser     = user
+		, networkDomain   = domain
 		}
 	
 	-- Keyring, item, and secret
 	keyringName <- peekUtf8 =<< {# get GnomeKeyringNetworkPasswordData->keyring #} pwd
 	itemID <- ItemID `fmap` {# get GnomeKeyringNetworkPasswordData->item_id #} pwd
 	password <- peekUtf8 =<< {# get GnomeKeyringNetworkPasswordData->password #} pwd
-	return (NetworkPassword (keyring keyringName) itemID loc password)
+	return (NetworkPassword (keyring keyringName) itemID net password)
 
 stealPasswordList :: Ptr (Ptr ()) -> IO [NetworkPassword]
 stealPasswordList ptr = bracket (peek ptr)
