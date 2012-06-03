@@ -49,14 +49,12 @@ module Gnome.Keyring
 	, itemCreated
 	
 	-- ** Item attributes
-	-- $attribute-doc
 	, Attribute (..)
 	, attributeName
 	, getItemAttributes
 	, setItemAttributes
 	
 	-- ** Access control
-	-- $access-control-doc
 	, Access (..)
 	, AccessType (..)
 	, getItemAccess
@@ -172,7 +170,7 @@ import           Data.Text.Encoding (encodeUtf8, decodeUtf8)
 -- Each item has an access control list, which specifies which applications
 -- may read, write or delete an item. The read access applies only to
 -- reading the secret. All applications can read other parts of the item.
--- ACLs are accessed and changed through 'AccessControl' values.
+-- ACLs are accessed and changed through 'Access' values.
 
 newtype ItemID = ItemID CUInt
 	deriving (Show, Eq, Ord)
@@ -184,6 +182,7 @@ data ItemType
 	| ItemChainedKeyringPassword
 	| ItemEncryptionKeyPassword
 	| ItemPublicKeyStorage
+	| ItemApplicationSecret
 	deriving (Show, Eq)
 
 data Item = Item
@@ -218,6 +217,7 @@ fromItemType ItemNote = 2
 fromItemType ItemChainedKeyringPassword = 3
 fromItemType ItemEncryptionKeyPassword = 4
 fromItemType ItemPublicKeyStorage = 0x100
+fromItemType ItemApplicationSecret = 0x01000000
 
 toItemType :: CInt -> ItemType
 toItemType 0 = ItemGenericSecret
@@ -226,6 +226,7 @@ toItemType 2 = ItemNote
 toItemType 3 = ItemChainedKeyringPassword
 toItemType 4 = ItemEncryptionKeyPassword
 toItemType 0x100 = ItemPublicKeyStorage
+toItemType 0x01000000 = ItemApplicationSecret
 toItemType _ = ItemGenericSecret
 
 peekItemInfo :: Ptr () -> IO Item
@@ -428,15 +429,14 @@ setItem k item info = voidOperation
 	, withItemInfo* `Item'
 	} -> `(Result, ())' resultAndTuple #}
 
--- $attribute-doc
--- Attributes allow various other pieces of information to be associated
+{# enum GnomeKeyringAttributeType as AttributeType {} #}
+
+-- | Attributes allow various other pieces of information to be associated
 -- with an item. These can also be used to search for relevant items. Use
 -- 'getItemAttributes' or 'setItemAttributes' to manipulate attributes in
 -- the keyring.
 --
 -- Each attribute is either Unicode text, or an unsigned 32-bit integer.
-{# enum GnomeKeyringAttributeType as AttributeType {} #}
-
 data Attribute
 	= TextAttribute String String
 	| WordAttribute String Word32
@@ -539,18 +539,16 @@ setItemAttributes k item as = voidOperation
 	, withAttributeList* `[Attribute]'
 	} -> `(Result, ())' resultAndTuple #}
 
--- $access-control-doc
--- Each item has an access control list, which specifies which applications
--- may read, write or delete an item. The read access applies only to reading
--- the secret. All applications can read other parts of the item. ACLs are
--- accessed and changed with 'getItemAccess' and 'setItemAccess'.
-
 data AccessType
 	= AccessRead
 	| AccessWrite
 	| AccessRemove
 	deriving (Show, Eq, Ord)
 
+-- | Each item has an access control list, which specifies which applications
+-- may read, write or delete an item. The read access applies only to reading
+-- the secret. All applications can read other parts of the item. ACLs are
+-- accessed and changed with 'getItemAccess' and 'setItemAccess'.
 data Access = Access
 	{ accessName :: Maybe String
 	, accessPath :: Maybe String
