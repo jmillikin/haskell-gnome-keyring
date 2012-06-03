@@ -117,7 +117,6 @@ module Gnome.Keyring
 
 import           Control.Exception (Exception, bracket, throwIO)
 import           Control.Monad (join)
-import           Data.Set (Set, toList, fromList)
 import           Data.Time (UTCTime)
 import           Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import           Data.Typeable (Typeable)
@@ -508,7 +507,7 @@ data AccessType
 data AccessControl = AccessControl
 	{ accessControlName :: Maybe String
 	, accessControlPath :: Maybe String
-	, accessControlType :: Set AccessType
+	, accessControlType :: [AccessType]
 	}
 	deriving (Show, Eq)
 
@@ -548,20 +547,19 @@ buildAC appRef ac = do
 freeACL :: Ptr () -> IO ()
 freeACL = {# call acl_free #}
 
-cAccessTypes :: Set AccessType -> CInt
-cAccessTypes = foldr (.|.) 0 . map fromAccessType . toList where
+cAccessTypes :: [AccessType] -> CInt
+cAccessTypes = foldr (.|.) 0 . map fromAccessType where
+	fromAccessType :: AccessType -> CInt
+	fromAccessType AccessRead   = 1
+	fromAccessType AccessWrite  = 2
+	fromAccessType AccessRemove = 4
 
-peekAccessType :: CInt -> Set AccessType
-peekAccessType cint = fromList $ concat
+peekAccessType :: CInt -> [AccessType]
+peekAccessType cint = concat
 	[ [AccessRead   | (cint .&. 1) > 0]
 	, [AccessWrite  | (cint .&. 2) > 0]
 	, [AccessRemove | (cint .&. 4) > 0]
 	]
-
-fromAccessType :: AccessType -> CInt
-fromAccessType AccessRead   = 1
-fromAccessType AccessWrite  = 2
-fromAccessType AccessRemove = 4
 
 accessControlListOperation :: OperationImpl GetListCallback [AccessControl]
 accessControlListOperation = operationImpl $ \checkResult ->
@@ -619,7 +617,7 @@ itemGrantAccessRights :: Keyring
                       -> String -- ^ Display name
                       -> String -- ^ Application executable path
                       -> ItemID
-                      -> Set AccessType
+                      -> [AccessType]
                       -> Operation ()
 itemGrantAccessRights k d p item r = voidOperation
 	(item_grant_access_rights k d p item r)
@@ -630,7 +628,7 @@ itemGrantAccessRights k d p item r = voidOperation
 	, withUtf8* `String'
 	, withUtf8* `String'
 	, cItemID `ItemID'
-	, cAccessTypes `Set AccessType'
+	, cAccessTypes `[AccessType]'
 	, id `DoneCallbackPtr'
 	, id `Ptr ()'
 	, id `DestroyNotifyPtr'
@@ -641,7 +639,7 @@ itemGrantAccessRights k d p item r = voidOperation
 	, withUtf8* `String'
 	, withUtf8* `String'
 	, cItemID `ItemID'
-	, cAccessTypes `Set AccessType'
+	, cAccessTypes `[AccessType]'
 	} -> `(Result, ())' resultAndTuple #}
 
 data FoundItem = FoundItem
