@@ -25,12 +25,12 @@ extra-source-files:
   "documentation license.txt"
 
 source-repository head
-  type: bazaar
-  location: https://john-millikin.com/branches/haskell-gnome-keyring/0.3/
+  type: git
+  location: https://john-millikin.com/code/haskell-gnome-keyring/
 
 source-repository this
-  type: bazaar
-  location: https://john-millikin.com/branches/haskell-gnome-keyring/0.3/
+  type: git
+  location: https://john-millikin.com/code/haskell-gnome-keyring/
   tag: haskell-gnome-keyring_0.3
 
 library
